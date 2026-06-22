@@ -130,6 +130,24 @@ After upgrade, verify:
 - public entry and ticket lookup still work on a test campaign, and
 - recent audit logs and completed draw records are still present.
 
+## Troubleshooting
+
+If the app does not start, inspect the app logs first:
+
+```bash
+docker compose -f docker-compose.prod.yml logs app
+```
+
+- Missing or invalid environment values: confirm `.env` contains `AUTH_SECRET`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD_HASH`. Regenerate the password hash with `npm run hash-password -- "your-password"` if login fails.
+- Database startup or Prisma errors: confirm the `lottery-data` volume exists, the app can write to `/app/data`, and the production Compose file is setting `DATABASE_URL=file:/app/data/prod.db`.
+- Unhealthy container: run `curl http://localhost:3000/api/health`. HTTP `503` means the app is serving requests but the database check is failing.
+- Failed smoke test: verify the URL passed to `npm run smoke:deploy -- <url>` is reachable from the host running the command and points to this app, not only to the reverse proxy.
+- Backup failure: confirm Docker is running, the production Compose project can stop/start the `app` service, and `/app/data/prod.db` exists before running `npm run backup`.
+- Restore failure: use only files directly inside `backups/` with the `prod-YYYYMMDD-HHMMSS.db` naming pattern, and include `--confirm`.
+- Public rate limits not behaving as expected: allow only your trusted reverse proxy to set `x-forwarded-for`, `x-real-ip`, or `cf-connecting-ip`.
+
+The app does not send email by default. If an operator adds SMTP or transactional email later, document and test those settings separately.
+
 ## Before Accepting Public Entries
 
 - Confirm legal, tax, age, prize, advertising, and licensing requirements.
