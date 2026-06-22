@@ -2,6 +2,23 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.6 - 2026-06-22
+
+Admin audit log filtering.
+
+### Added
+
+- Campaign admin audit log panel with search, action filters, entity filters, date range filters, and pagination.
+- Audit log query helper and unit tests for filter parsing and pagination behavior.
+
+### Changed
+
+- Audit log lookups now include Prisma indexes for entity, action, and created-at queries.
+
+### Operations
+
+- Admins can inspect campaign activity in the dashboard without exporting the full audit CSV.
+
 ## v0.1.5 - 2026-06-22
 
 Database backup and restore helpers.
