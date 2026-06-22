@@ -2,6 +2,26 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.1 - 2026-06-22
+
+Public release polish and operator workflow improvements after the initial `v0.1.0` release.
+
+### Added
+
+- Public participant entry forms with ticket confirmation and basic abuse protection.
+- Participant ticket lookup for public campaign pages.
+- Public draw verification pages and polished campaign result views.
+- Admin participant management, prize management, and improved CSV import error handling.
+- Campaign lifecycle controls, operator branding settings, and draw integrity safeguards.
+- Contributor, security, issue template, pull request template, and public release documentation.
+
+### Operations
+
+- Use Docker Compose or another persistent volume for SQLite production data.
+- Back up the database before draws and upgrades.
+- Put internet-facing deployments behind HTTPS and a trusted reverse proxy.
+- Confirm legal, tax, age, prize, advertising, and licensing requirements before accepting public entries.
+
 ## v0.1.0 - 2026-06-22
 
 Initial public release for self-hosted lottery and prize draw management.
