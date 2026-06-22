@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 const demoSlug = "demo-summer-rewards";
 const seed = "open-lottery-manager-demo-seed-v1";
 const algorithmVersion = "olm-random-shuffle-v1";
+const appSettingsId = "app";
 
 const entries = [
   ["Amina Hassan", "amina@example.com", "DEMO-1001"],
@@ -59,6 +60,18 @@ function selectWinners(entryRecords, prizeRecords) {
 }
 
 async function main() {
+  await prisma.appSettings.upsert({
+    where: { id: appSettingsId },
+    create: {
+      id: appSettingsId,
+      operatorName: "Open Lottery Manager",
+      publicTagline:
+        "Self-hosted campaign management for lawful prize draws, raffles, promotional giveaways, and licensed lottery-style operations.",
+      brandColor: "#3f6f5f"
+    },
+    update: {}
+  });
+
   const existing = await prisma.campaign.findUnique({
     where: { slug: demoSlug },
     select: { id: true }

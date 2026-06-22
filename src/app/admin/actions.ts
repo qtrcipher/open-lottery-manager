@@ -3,6 +3,7 @@
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { upsertAppSettings } from "@/lib/app-settings";
 import {
   canDeleteCampaign,
   canModifyCampaign,
@@ -16,7 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { slugify } from "@/lib/slug";
 import { createTicketCode } from "@/lib/tickets";
-import { campaignSchema, entrySchema, prizeSchema } from "@/lib/validators";
+import { appSettingsSchema, campaignSchema, entrySchema, prizeSchema } from "@/lib/validators";
 
 function optionalDate(value?: string): Date | null {
   if (!value) {
@@ -448,4 +449,22 @@ export async function deleteCampaignAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath(`/campaigns/${campaign.slug}`);
   redirect("/admin");
+}
+
+export async function updateAppSettingsAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const parsed = appSettingsSchema.parse({
+    operatorName: formString(formData, "operatorName"),
+    publicTagline: formString(formData, "publicTagline"),
+    supportEmail: formString(formData, "supportEmail"),
+    logoUrl: formString(formData, "logoUrl"),
+    brandColor: formString(formData, "brandColor")
+  });
+
+  await upsertAppSettings(parsed);
+  await writeAudit("settings.update", "AppSettings", "app", { admin: admin.email });
+
+  revalidatePath("/", "layout");
+  revalidatePath("/admin", "layout");
+  redirect("/admin/settings?saved=1");
 }

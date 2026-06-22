@@ -6,6 +6,7 @@
   color-scheme: light;
   background: #f7f4ed;
   color: #172026;
+  --brand-color: #3f6f5f;
 }
 
 * {
@@ -35,8 +36,24 @@ select {
 }
 
 :focus-visible {
-  outline: 3px solid #c7922b;
+  outline: 3px solid var(--brand-color);
   outline-offset: 3px;
+}
+
+.brand-bg {
+  background-color: var(--brand-color);
+}
+
+.brand-bg:hover {
+  filter: brightness(0.88);
+}
+
+.brand-text {
+  color: var(--brand-color);
+}
+
+.brand-border {
+  border-color: var(--brand-color);
 }
 
 @media (prefers-reduced-motion: reduce) {

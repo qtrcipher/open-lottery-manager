@@ -1,27 +1,32 @@
 import { notFound } from "next/navigation";
+import { OperatorBrand } from "@/components/brand";
 import { ButtonLink, PageShell, Panel, StatusBadge } from "@/components/ui";
+import { getAppSettings } from "@/lib/app-settings";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function CampaignPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
-  const campaign = await prisma.campaign.findFirst({
-    where: { slug: resolvedParams.slug, isPublic: true, status: { not: "ARCHIVED" } },
-    include: {
-      prizes: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
-      draws: {
-        orderBy: { createdAt: "desc" },
-        include: {
-          winners: {
-            orderBy: { rank: "asc" },
-            include: { entry: true, prize: true }
+  const [settings, campaign] = await Promise.all([
+    getAppSettings(),
+    prisma.campaign.findFirst({
+      where: { slug: resolvedParams.slug, isPublic: true, status: { not: "ARCHIVED" } },
+      include: {
+        prizes: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
+        draws: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            winners: {
+              orderBy: { rank: "asc" },
+              include: { entry: true, prize: true }
+            }
           }
-        }
-      },
-      _count: { select: { entries: true } }
-    }
-  });
+        },
+        _count: { select: { entries: true } }
+      }
+    })
+  ]);
 
   if (!campaign) {
     notFound();
@@ -32,6 +37,9 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
   return (
     <PageShell>
       <header className="py-8">
+        <div className="mb-5">
+          <OperatorBrand settings={settings} />
+        </div>
         <StatusBadge>{campaign.status}</StatusBadge>
         <h1 className="mt-4 text-4xl font-bold">{campaign.title}</h1>
         <p className="mt-4 max-w-3xl text-base leading-7 text-ink/72">{campaign.description}</p>
@@ -57,6 +65,16 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
               <dt className="text-ink/64">End</dt>
               <dd className="font-semibold">{campaign.endsAt ? campaign.endsAt.toLocaleString() : "Not set"}</dd>
             </div>
+            {settings.supportEmail ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink/64">Support</dt>
+                <dd className="font-semibold">
+                  <a className="brand-text" href={`mailto:${settings.supportEmail}`}>
+                    Email operator
+                  </a>
+                </dd>
+              </div>
+            ) : null}
           </dl>
         </Panel>
       </div>
@@ -106,13 +124,15 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
                   <li key={winner.id} className="rounded-md border border-line bg-white p-3">
                     <div className="flex items-center justify-between gap-4">
                       <span className="font-semibold">#{winner.rank} {winner.entry.name}</span>
-                      <span className="text-sm text-moss">{winner.prize.name}</span>
+                      <span className="brand-text text-sm">{winner.prize.name}</span>
                     </div>
                     <p className="mt-1 font-mono text-xs text-ink/58">{winner.entry.ticketCode}</p>
                   </li>
                 ))}
               </ol>
-              <ButtonLink href={`/campaigns/${campaign.slug}/verify`}>Verify draw</ButtonLink>
+              <ButtonLink href={`/campaigns/${campaign.slug}/verify`} className="brand-bg">
+                Verify draw
+              </ButtonLink>
             </div>
           )}
         </Panel>

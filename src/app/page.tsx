@@ -1,34 +1,50 @@
 import { CalendarDays, ShieldCheck, Ticket } from "lucide-react";
+import { OperatorBrand } from "@/components/brand";
 import { prisma } from "@/lib/prisma";
 import { ButtonLink, PageShell, Panel, StatusBadge } from "@/components/ui";
+import { getAppSettings } from "@/lib/app-settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const campaigns = await prisma.campaign.findMany({
-    where: { isPublic: true, status: { not: "ARCHIVED" } },
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: {
-        select: { entries: true, prizes: true }
+  const [settings, campaigns] = await Promise.all([
+    getAppSettings(),
+    prisma.campaign.findMany({
+      where: { isPublic: true, status: { not: "ARCHIVED" } },
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: {
+          select: { entries: true, prizes: true }
+        }
       }
-    }
-  });
+    })
+  ]);
 
   return (
     <PageShell>
       <header className="flex flex-col gap-6 py-8 md:flex-row md:items-end md:justify-between">
         <div className="max-w-3xl">
+          <OperatorBrand href="" settings={settings} className="mb-5 text-lg" />
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-line bg-white/70 px-3 py-1 text-sm font-semibold text-moss">
             <ShieldCheck size={16} aria-hidden="true" />
             Open-source draw operations
           </div>
-          <h1 className="text-4xl font-bold tracking-normal text-ink sm:text-5xl">Open Lottery Manager</h1>
+          <h1 className="text-4xl font-bold tracking-normal text-ink sm:text-5xl">{settings.operatorName}</h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-ink/72">
-            Self-hosted campaign management for lawful prize draws, raffles, promotional giveaways, and licensed lottery-style operations.
+            {settings.publicTagline}
           </p>
+          {settings.supportEmail ? (
+            <p className="mt-3 text-sm text-ink/68">
+              Support:{" "}
+              <a className="brand-text font-semibold" href={`mailto:${settings.supportEmail}`}>
+                {settings.supportEmail}
+              </a>
+            </p>
+          ) : null}
         </div>
-        <ButtonLink href="/admin/login">Admin login</ButtonLink>
+        <ButtonLink href="/admin/login" className="brand-bg">
+          Admin login
+        </ButtonLink>
       </header>
 
       <section className="grid gap-4 md:grid-cols-3" aria-label="Platform highlights">
@@ -66,7 +82,7 @@ export default async function HomePage() {
                     <StatusBadge>{campaign.status}</StatusBadge>
                     <h3 className="mt-3 text-xl font-semibold">{campaign.title}</h3>
                   </div>
-                  <ButtonLink href={`/campaigns/${campaign.slug}`} className="bg-moss hover:bg-ink">
+                  <ButtonLink href={`/campaigns/${campaign.slug}`} className="brand-bg">
                     View
                   </ButtonLink>
                 </div>

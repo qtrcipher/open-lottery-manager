@@ -32,6 +32,17 @@ model Campaign {
   draws       Draw[]
 }
 
+model AppSettings {
+  id            String   @id
+  operatorName  String
+  publicTagline String
+  supportEmail  String?
+  logoUrl       String?
+  brandColor    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
 model Prize {
   id          String   @id @default(cuid())
   campaignId  String

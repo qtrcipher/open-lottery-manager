@@ -11,6 +11,7 @@ This project is software only. Operators are responsible for complying with all 
 - Manual entry creation and CSV import.
 - Auditable draws using server-side cryptographic randomness.
 - Public results pages with seed hashes and algorithm version.
+- Operator branding settings for name, tagline, support email, logo URL, and primary color.
 - Single-admin authentication for small self-hosted deployments.
 - SQLite persistence through Prisma.
 
@@ -103,6 +104,10 @@ Delete is only available for draft campaigns with no completed draw. The admin m
 Completed public campaigns include a verification page at `/campaigns/[slug]/verify`. It shows the recorded seed hash, algorithm version, draw timestamp, entry counts, winner count, and ordered winners for participant inspection.
 
 The verification page does not expose the raw draw seed and does not replace legal, regulatory, or independent audit requirements.
+
+## Branding Settings
+
+Admins can customize the operator identity at `/admin/settings`. Configure the public operator name, tagline, support email, hosted logo URL, and primary brand color. Existing deployments should run `npm run db:push` after pulling this version so the settings table exists.
 
 ## Legal And Compliance Notice
 
