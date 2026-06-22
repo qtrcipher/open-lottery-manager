@@ -97,6 +97,7 @@ For production setup, backups, reverse proxy notes, and upgrades, see [DEPLOYMEN
 - Use Docker Compose or another persistent volume for SQLite, and back up the database before draws and before upgrades.
 - Put the app behind HTTPS and a trusted reverse proxy. Control forwarded IP headers before relying on rate limits.
 - Set a real `ADMIN_EMAIL`, configure support details in `/admin/settings`, and replace demo rules before publishing campaigns.
+- Verify runtime health with `/api/health` after deployment.
 - Confirm legal, tax, age, prize, advertising, and licensing requirements before accepting public entries.
 - Keep dependencies updated and review `SECURITY.md` before reporting vulnerabilities.
 

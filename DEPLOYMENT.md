@@ -32,6 +32,14 @@ docker compose logs -f app
 
 Open `http://localhost:3000/admin/login` or the public URL routed through your reverse proxy. The Compose service overrides `DATABASE_URL` to `file:/app/data/prod.db`, runs `npx prisma db push`, and starts Next.js on port `3000`.
 
+Check runtime health:
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+The endpoint returns JSON with app status, package version, timestamp, and database connectivity. A healthy response uses HTTP `200`; a database connectivity failure uses HTTP `503`.
+
 ## Data Persistence
 
 Campaign, entry, prize, draw, audit, settings, and rate-limit records are stored in SQLite at `/app/data/prod.db` inside the container. Docker Compose persists `/app/data` in the named volume declared as `lottery-data`.
@@ -90,6 +98,8 @@ Configure the proxy to:
 
 Public entry and ticket lookup rate limits read client identity from `x-forwarded-for`, `x-real-ip`, then `cf-connecting-ip`. Only allow your trusted proxy to set those headers; otherwise clients can spoof IP identity and weaken rate limiting.
 
+Reverse proxies and load balancers can use `/api/health` for readiness checks. The endpoint is unauthenticated and intentionally exposes only basic status, version, timestamp, and database connectivity.
+
 ## Upgrade Workflow
 
 Before upgrading:
@@ -112,6 +122,7 @@ docker compose logs -f app
 
 After upgrade, verify:
 
+- `curl http://localhost:3000/api/health` returns HTTP `200`,
 - admin login works,
 - campaign lists load,
 - public campaign pages load,
@@ -126,4 +137,5 @@ After upgrade, verify:
 - Use a strong admin password and keep `.env` private.
 - Confirm database backups and restore steps.
 - Confirm HTTPS and trusted proxy headers.
+- Confirm `/api/health` returns HTTP `200`.
 - Run a test campaign and draw before using real participant data.
