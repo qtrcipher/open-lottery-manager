@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft, AlertCircle, CheckCircle2, Search, Ticket } from "lucide-react";
 import { notFound } from "next/navigation";
 import { lookupTicketAction } from "@/app/campaigns/actions";
 import { OperatorBrand } from "@/components/brand";
@@ -18,6 +19,13 @@ function lookupStatusMessage(status?: string): string | null {
   }
 
   return null;
+}
+
+function formatDateTime(value: Date): string {
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(value);
 }
 
 export default async function TicketLookupPage({
@@ -51,22 +59,31 @@ export default async function TicketLookupPage({
 
   return (
     <PageShell>
-      <header className="flex flex-col gap-4 py-8 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-5 py-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="mb-5">
             <OperatorBrand settings={settings} />
           </div>
-          <h1 className="text-4xl font-bold">{campaign.title}</h1>
+          <div className="flex items-center gap-2 text-sm font-semibold brand-text">
+            <Ticket size={18} aria-hidden="true" />
+            Ticket lookup
+          </div>
+          <h1 className="mt-3 max-w-4xl text-4xl font-bold leading-tight">{campaign.title}</h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-ink/72">Find your ticket code and entry status for this campaign.</p>
         </div>
-        <Link className="brand-text font-semibold" href={`/campaigns/${campaign.slug}`}>
+        <Link className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:bg-paper" href={`/campaigns/${campaign.slug}`}>
+          <ArrowLeft size={18} aria-hidden="true" />
           Back to campaign
         </Link>
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
         <Panel>
-          <h2 className="text-xl font-semibold">Find my ticket</h2>
+          <div className="flex items-center gap-2">
+            <Search size={20} aria-hidden="true" />
+            <h2 className="text-xl font-semibold">Find my ticket</h2>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-ink/68">Use the same email used for entry. Add the reference if the operator provided one.</p>
           <form action={lookupTicketAction} className="mt-4 space-y-4">
             <input name="slug" type="hidden" value={campaign.slug} />
             <div className="hp-field" aria-hidden="true">
@@ -88,7 +105,12 @@ export default async function TicketLookupPage({
         <Panel>
           <h2 className="text-xl font-semibold">Lookup result</h2>
           {entry ? (
-            <dl className="mt-4 space-y-3 text-sm">
+            <div className="mt-4 rounded-md border border-moss/30 bg-moss/10 p-4">
+              <div className="flex items-center gap-2 font-semibold text-moss">
+                <CheckCircle2 size={20} aria-hidden="true" />
+                Ticket found
+              </div>
+              <dl className="mt-4 space-y-3 text-sm">
               <div>
                 <dt className="text-ink/64">Ticket code</dt>
                 <dd className="mt-1 break-all font-mono text-lg font-bold">{entry.ticketCode}</dd>
@@ -99,13 +121,19 @@ export default async function TicketLookupPage({
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-ink/64">Entered</dt>
-                <dd className="font-semibold">{entry.createdAt.toLocaleString()}</dd>
+                <dd className="font-semibold">{formatDateTime(entry.createdAt)}</dd>
               </div>
-            </dl>
+              </dl>
+            </div>
           ) : lookupMessage ? (
-            <p className="mt-4 rounded-md border border-brick/30 bg-brick/10 p-3 text-sm text-brick">{lookupMessage}</p>
+            <div className="mt-4 flex gap-3 rounded-md border border-brick/30 bg-brick/10 p-4 text-sm text-brick">
+              <AlertCircle size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <p>{lookupMessage}</p>
+            </div>
           ) : (
-            <p className="mt-4 text-sm leading-6 text-ink/70">Enter the email used for your campaign entry. If the operator gave you a reference, include it to narrow the lookup.</p>
+            <div className="mt-4 rounded-md border border-line bg-paper/70 p-4 text-sm leading-6 text-ink/70">
+              Enter the email used for your campaign entry. If the operator gave you a reference, include it to narrow the lookup.
+            </div>
           )}
         </Panel>
       </div>

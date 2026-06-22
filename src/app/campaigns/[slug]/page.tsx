@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CalendarDays, Gift, Search, ShieldCheck, Ticket, Trophy } from "lucide-react";
 import { notFound } from "next/navigation";
 import { createPublicEntryAction } from "@/app/campaigns/actions";
 import { OperatorBrand } from "@/components/brand";
@@ -31,6 +32,15 @@ function publicEntryStatusMessage(status: PublicEntryStatus): string {
   }
 
   return "Entries are open.";
+}
+
+function formatDateTime(value?: Date | null): string {
+  return value
+    ? new Intl.DateTimeFormat("en", {
+        dateStyle: "medium",
+        timeStyle: "short"
+      }).format(value)
+    : "Not set";
 }
 
 function publicEntryErrorMessage(error?: string): string | null {
@@ -103,68 +113,88 @@ export default async function CampaignPage({
     drawCount: campaign.draws.length
   });
   const entryError = publicEntryErrorMessage(resolvedSearchParams.entry);
+  const entryStatusMessage = publicEntryStatusMessage(publicEntryStatus);
 
   return (
     <PageShell>
       <header className="py-8">
-        <div className="mb-5">
-          <OperatorBrand settings={settings} />
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="mb-5">
+              <OperatorBrand settings={settings} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge>{campaign.status}</StatusBadge>
+              <span className="rounded-full border border-line bg-white/72 px-3 py-1 text-xs font-semibold text-ink/70">{entryStatusMessage}</span>
+            </div>
+            <h1 className="mt-4 max-w-4xl text-4xl font-bold leading-tight sm:text-5xl">{campaign.title}</h1>
+            <p className="mt-4 max-w-3xl text-base leading-7 text-ink/72">{campaign.description}</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={`/campaigns/${campaign.slug}/lookup`}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:bg-paper"
+            >
+              <Search size={18} aria-hidden="true" />
+              Find my ticket
+            </Link>
+            {draw ? (
+              <ButtonLink href={`/campaigns/${campaign.slug}/verify`} className="brand-bg gap-2">
+                <ShieldCheck size={18} aria-hidden="true" />
+                Draw record
+              </ButtonLink>
+            ) : null}
+          </div>
         </div>
-        <StatusBadge>{campaign.status}</StatusBadge>
-        <h1 className="mt-4 text-4xl font-bold">{campaign.title}</h1>
-        <p className="mt-4 max-w-3xl text-base leading-7 text-ink/72">{campaign.description}</p>
+        <dl className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-line bg-white/72 p-4">
+            <dt className="flex items-center gap-2 text-xs font-semibold uppercase text-ink/56">
+              <Ticket size={16} aria-hidden="true" />
+              Entries
+            </dt>
+            <dd className="mt-2 text-2xl font-bold">{campaign._count.entries}</dd>
+          </div>
+          <div className="rounded-lg border border-line bg-white/72 p-4">
+            <dt className="flex items-center gap-2 text-xs font-semibold uppercase text-ink/56">
+              <Gift size={16} aria-hidden="true" />
+              Prizes
+            </dt>
+            <dd className="mt-2 text-2xl font-bold">{campaign.prizes.length}</dd>
+          </div>
+          <div className="rounded-lg border border-line bg-white/72 p-4">
+            <dt className="flex items-center gap-2 text-xs font-semibold uppercase text-ink/56">
+              <CalendarDays size={16} aria-hidden="true" />
+              Ends
+            </dt>
+            <dd className="mt-2 text-sm font-semibold">{formatDateTime(campaign.endsAt)}</dd>
+          </div>
+          <div className="rounded-lg border border-line bg-white/72 p-4">
+            <dt className="flex items-center gap-2 text-xs font-semibold uppercase text-ink/56">
+              <Trophy size={16} aria-hidden="true" />
+              Result
+            </dt>
+            <dd className="mt-2 text-sm font-semibold">{draw ? "Draw completed" : "Awaiting draw"}</dd>
+          </div>
+        </dl>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
-        <Panel>
-          <h2 className="text-xl font-semibold">Campaign rules</h2>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink/74">{campaign.rules}</p>
-        </Panel>
-        <Panel>
-          <h2 className="text-xl font-semibold">Campaign details</h2>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-ink/64">Entries</dt>
-              <dd className="font-semibold">{campaign._count.entries}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-ink/64">Start</dt>
-              <dd className="font-semibold">{campaign.startsAt ? campaign.startsAt.toLocaleString() : "Not set"}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-ink/64">End</dt>
-              <dd className="font-semibold">{campaign.endsAt ? campaign.endsAt.toLocaleString() : "Not set"}</dd>
-            </div>
-            {settings.supportEmail ? (
-              <div className="flex justify-between gap-4">
-                <dt className="text-ink/64">Support</dt>
-                <dd className="font-semibold">
-                  <a className="brand-text" href={`mailto:${settings.supportEmail}`}>
-                    Email operator
-                  </a>
-                </dd>
-              </div>
-            ) : null}
-            <div className="flex justify-between gap-4">
-              <dt className="text-ink/64">Ticket lookup</dt>
-              <dd className="font-semibold">
-                <Link className="brand-text" href={`/campaigns/${campaign.slug}/lookup`}>
-                  Find my ticket
-                </Link>
-              </dd>
-            </div>
-          </dl>
-        </Panel>
-      </div>
-
       {!draw ? (
-        <Panel className="mt-6">
-          <h2 className="text-xl font-semibold">Enter campaign</h2>
+        <Panel className="mb-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Enter campaign</h2>
+              <p className="mt-2 text-sm leading-6 text-ink/68">Submit one entry with your name and email. Keep your ticket code after entry.</p>
+            </div>
+            <span className="rounded-full border border-line bg-paper px-3 py-1 text-xs font-semibold text-ink/64">{entryStatusMessage}</span>
+          </div>
           {resolvedSearchParams.ticket ? (
             <div className="mt-4 rounded-md border border-moss/30 bg-moss/10 p-4 text-sm">
               <p className="font-semibold text-moss">Entry received.</p>
               <p className="mt-2 text-ink/70">Your ticket code is:</p>
               <p className="mt-2 break-all font-mono text-lg font-bold text-ink">{resolvedSearchParams.ticket}</p>
+              <Link className="mt-3 inline-block font-semibold brand-text" href={`/campaigns/${campaign.slug}/lookup`}>
+                Open ticket lookup
+              </Link>
             </div>
           ) : publicEntryStatus === "open" ? (
             <>
@@ -191,14 +221,59 @@ export default async function CampaignPage({
               </form>
             </>
           ) : (
-            <p className="mt-4 text-sm text-ink/68">{publicEntryStatusMessage(publicEntryStatus)}</p>
+            <p className="mt-4 rounded-md border border-line bg-paper/70 p-4 text-sm text-ink/68">{entryStatusMessage}</p>
           )}
         </Panel>
       ) : null}
 
+      <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
+        <Panel>
+          <h2 className="text-xl font-semibold">Campaign rules</h2>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink/74">{campaign.rules}</p>
+        </Panel>
+        <Panel>
+          <h2 className="text-xl font-semibold">Campaign details</h2>
+          <dl className="mt-4 space-y-3 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink/64">Entries</dt>
+              <dd className="font-semibold">{campaign._count.entries}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink/64">Start</dt>
+              <dd className="font-semibold">{formatDateTime(campaign.startsAt)}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink/64">End</dt>
+              <dd className="font-semibold">{formatDateTime(campaign.endsAt)}</dd>
+            </div>
+            {settings.supportEmail ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink/64">Support</dt>
+                <dd className="font-semibold">
+                  <a className="brand-text" href={`mailto:${settings.supportEmail}`}>
+                    Email operator
+                  </a>
+                </dd>
+              </div>
+            ) : null}
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink/64">Ticket lookup</dt>
+              <dd className="font-semibold">
+                <Link className="brand-text" href={`/campaigns/${campaign.slug}/lookup`}>
+                  Find my ticket
+                </Link>
+              </dd>
+            </div>
+          </dl>
+        </Panel>
+      </div>
+
       <section className="mt-6 grid gap-5 lg:grid-cols-2">
         <Panel>
-          <h2 className="text-xl font-semibold">Prizes</h2>
+          <div className="flex items-center gap-2">
+            <Gift size={20} aria-hidden="true" />
+            <h2 className="text-xl font-semibold">Prizes</h2>
+          </div>
           <div className="mt-4 space-y-3">
             {campaign.prizes.length === 0 ? (
               <p className="text-sm text-ink/68">No prizes have been published yet.</p>
@@ -217,7 +292,10 @@ export default async function CampaignPage({
         </Panel>
 
         <Panel>
-          <h2 className="text-xl font-semibold">Draw results</h2>
+          <div className="flex items-center gap-2">
+            <Trophy size={20} aria-hidden="true" />
+            <h2 className="text-xl font-semibold">Draw results</h2>
+          </div>
           {!draw ? (
             <p className="mt-4 text-sm text-ink/68">Results will appear here after the operator completes the draw.</p>
           ) : (
@@ -225,7 +303,7 @@ export default async function CampaignPage({
               <dl className="rounded-md border border-line bg-paper/70 p-3 text-sm">
                 <div className="flex justify-between gap-4">
                   <dt className="text-ink/64">Completed</dt>
-                  <dd className="font-semibold">{draw.createdAt.toLocaleString()}</dd>
+                  <dd className="font-semibold">{formatDateTime(draw.createdAt)}</dd>
                 </div>
                 <div className="mt-2 break-all">
                   <dt className="text-ink/64">Seed hash</dt>
@@ -247,7 +325,8 @@ export default async function CampaignPage({
                   </li>
                 ))}
               </ol>
-              <ButtonLink href={`/campaigns/${campaign.slug}/verify`} className="brand-bg">
+              <ButtonLink href={`/campaigns/${campaign.slug}/verify`} className="brand-bg gap-2">
+                <ShieldCheck size={18} aria-hidden="true" />
                 View draw record
               </ButtonLink>
             </div>
