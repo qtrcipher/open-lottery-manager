@@ -18,6 +18,15 @@ import {
 } from "@/app/admin/actions";
 import { CsvImportForm } from "@/components/csv-import-form";
 import { Label, PageShell, Panel, StatusBadge, SubmitButton, TextArea, TextInput } from "@/components/ui";
+import {
+  auditLogPageSize,
+  auditLogQueryString,
+  auditLogSkip,
+  buildAuditLogWhere,
+  campaignAuditBaseWhere,
+  clampAuditLogPage,
+  parseAuditLogFilters
+} from "@/lib/audit-log";
 import { canDeleteCampaign, canEditCampaignSetup } from "@/lib/campaign-lifecycle";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
@@ -109,7 +118,18 @@ export default async function CampaignAdminPage({
   searchParams
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ entrySearch?: string; entryStatus?: string; entryMessage?: string; prizeMessage?: string }>;
+  searchParams: Promise<{
+    entrySearch?: string;
+    entryStatus?: string;
+    entryMessage?: string;
+    prizeMessage?: string;
+    auditSearch?: string;
+    auditAction?: string;
+    auditEntityType?: string;
+    auditFrom?: string;
+    auditTo?: string;
+    auditPage?: string;
+  }>;
 }) {
   await requireAdmin();
   const [resolvedParams, resolvedSearchParams] = await Promise.all([params, searchParams]);
@@ -139,9 +159,13 @@ export default async function CampaignAdminPage({
 
   const draw = campaign.draws[0];
   const exportBase = `/admin/campaigns/${campaign.id}/exports`;
+  const campaignAdminBase = `/admin/campaigns/${campaign.id}`;
   const isArchived = campaign.status === "ARCHIVED";
   const canEditSetup = canEditCampaignSetup(campaign.status, campaign._count.draws);
   const canDelete = canDeleteCampaign(campaign.status, campaign._count.draws);
+  const auditFilters = parseAuditLogFilters(resolvedSearchParams);
+  const auditBaseWhere = campaignAuditBaseWhere(campaign.id);
+  const auditWhere = buildAuditLogWhere(campaign.id, auditFilters);
   const entryWhere: Prisma.EntryWhereInput = {
     campaignId: campaign.id,
     ...(selectedEntryStatus === "eligible" ? { isEligible: true } : {}),
@@ -165,6 +189,26 @@ export default async function CampaignAdminPage({
     prisma.entry.count({ where: { campaignId: campaign.id, isEligible: true } }),
     prisma.entry.count({ where: { campaignId: campaign.id, isEligible: false } })
   ]);
+  const auditTotalCount = await prisma.auditLog.count({ where: auditWhere });
+  const auditPage = clampAuditLogPage(auditFilters.page, auditTotalCount);
+  const [auditLogs, auditOptionLogs] = await Promise.all([
+    prisma.auditLog.findMany({
+      where: auditWhere,
+      orderBy: { createdAt: "desc" },
+      skip: auditLogSkip(auditPage),
+      take: auditLogPageSize
+    }),
+    prisma.auditLog.findMany({
+      where: auditBaseWhere,
+      select: { action: true, entityType: true },
+      orderBy: [{ action: "asc" }, { entityType: "asc" }]
+    })
+  ]);
+  const auditActionOptions = Array.from(new Set(auditOptionLogs.map((log) => log.action))).sort();
+  const auditEntityTypeOptions = Array.from(new Set(auditOptionLogs.map((log) => log.entityType))).sort();
+  const auditPageCount = Math.max(1, Math.ceil(auditTotalCount / auditLogPageSize));
+  const auditPreviousQuery = auditLogQueryString(auditFilters, { page: auditPage - 1 });
+  const auditNextQuery = auditLogQueryString(auditFilters, { page: auditPage + 1 });
   const entryMessage = entryMessageText(resolvedSearchParams.entryMessage);
   const prizeMessage = prizeMessageText(resolvedSearchParams.prizeMessage);
 
@@ -666,6 +710,129 @@ export default async function CampaignAdminPage({
           </ol>
         </Panel>
       ) : null}
+
+      <Panel className="mt-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Audit log</h2>
+            <p className="mt-1 text-sm text-ink/64">Search and review campaign activity records.</p>
+          </div>
+          <span className="rounded-full border border-line bg-paper px-3 py-1 text-xs font-semibold uppercase text-ink/60">
+            {auditTotalCount} matching
+          </span>
+        </div>
+
+        <form className="mt-4 grid gap-3 lg:grid-cols-[1fr_12rem_12rem_11rem_11rem_auto_auto] lg:items-end" method="get">
+          {entrySearch ? <input name="entrySearch" type="hidden" value={entrySearch} /> : null}
+          {selectedEntryStatus !== "all" ? <input name="entryStatus" type="hidden" value={selectedEntryStatus} /> : null}
+          <div>
+            <Label>Search audit</Label>
+            <TextInput name="auditSearch" defaultValue={auditFilters.search} placeholder="Action, entity, id, or metadata" />
+          </div>
+          <div>
+            <Label>Action</Label>
+            <select
+              className="min-h-11 w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm"
+              name="auditAction"
+              defaultValue={auditFilters.action}
+            >
+              <option value="">All actions</option>
+              {auditActionOptions.map((action) => (
+                <option key={action} value={action}>
+                  {action}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label>Entity type</Label>
+            <select
+              className="min-h-11 w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm"
+              name="auditEntityType"
+              defaultValue={auditFilters.entityType}
+            >
+              <option value="">All entities</option>
+              {auditEntityTypeOptions.map((entityType) => (
+                <option key={entityType} value={entityType}>
+                  {entityType}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label>From</Label>
+            <TextInput name="auditFrom" type="datetime-local" defaultValue={auditFilters.fromInput} />
+          </div>
+          <div>
+            <Label>To</Label>
+            <TextInput name="auditTo" type="datetime-local" defaultValue={auditFilters.toInput} />
+          </div>
+          <SubmitButton>Filter</SubmitButton>
+          <Link
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+            href={campaignAdminBase}
+          >
+            Reset
+          </Link>
+        </form>
+
+        <div className="mt-4 overflow-x-auto">
+          {auditLogs.length === 0 ? (
+            <p className="rounded-md border border-line bg-paper/70 p-4 text-sm text-ink/68">No audit records match the current filters.</p>
+          ) : (
+            <table className="min-w-[980px] w-full border-separate border-spacing-0 text-left text-sm">
+              <thead>
+                <tr className="text-xs uppercase text-ink/58">
+                  <th className="border-b border-line px-3 py-2 font-semibold">Timestamp</th>
+                  <th className="border-b border-line px-3 py-2 font-semibold">Action</th>
+                  <th className="border-b border-line px-3 py-2 font-semibold">Entity</th>
+                  <th className="border-b border-line px-3 py-2 font-semibold">Entity id</th>
+                  <th className="border-b border-line px-3 py-2 font-semibold">Metadata</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditLogs.map((log) => (
+                  <tr key={log.id} className="align-top">
+                    <td className="border-b border-line px-3 py-3 text-ink/64">{log.createdAt.toLocaleString()}</td>
+                    <td className="border-b border-line px-3 py-3 font-semibold">{log.action}</td>
+                    <td className="border-b border-line px-3 py-3 text-ink/70">{log.entityType}</td>
+                    <td className="border-b border-line px-3 py-3">
+                      <span className="break-all font-mono text-xs text-ink/64">{log.entityId}</span>
+                    </td>
+                    <td className="border-b border-line px-3 py-3">
+                      <span className="break-all font-mono text-xs text-ink/64">{log.metadata ?? "None"}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3 text-sm text-ink/68 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            Page {auditPage} of {auditPageCount}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {auditPage > 1 ? (
+              <Link
+                className="inline-flex min-h-10 items-center justify-center rounded-md border border-line bg-white px-3 py-2 font-semibold text-ink transition hover:border-moss hover:text-moss"
+                href={`${campaignAdminBase}${auditPreviousQuery ? `?${auditPreviousQuery}` : ""}`}
+              >
+                Previous
+              </Link>
+            ) : null}
+            {auditPage < auditPageCount ? (
+              <Link
+                className="inline-flex min-h-10 items-center justify-center rounded-md border border-line bg-white px-3 py-2 font-semibold text-ink transition hover:border-moss hover:text-moss"
+                href={`${campaignAdminBase}${auditNextQuery ? `?${auditNextQuery}` : ""}`}
+              >
+                Next
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      </Panel>
     </PageShell>
   );
 }
