@@ -18,7 +18,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { slugify } from "@/lib/slug";
 import { createTicketCode } from "@/lib/tickets";
-import { appSettingsSchema, campaignSchema, entrySchema, prizeSchema } from "@/lib/validators";
+import { appSettingsSchema, campaignSchema, entrySchema, entryUpdateSchema, prizeSchema } from "@/lib/validators";
 
 function optionalDate(value?: string): Date | null {
   if (!value) {
@@ -43,12 +43,47 @@ async function writeAudit(action: string, entityType: string, entityId: string, 
   });
 }
 
-function isUniqueError(error: unknown): boolean {
+function isUniqueError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
+function uniqueFailureCode(error: Prisma.PrismaClientKnownRequestError): string {
+  const target = Array.isArray(error.meta?.target) ? error.meta.target.join(",") : String(error.meta?.target ?? "");
+
+  if (target.includes("email")) {
+    return "duplicate-email";
+  }
+
+  if (target.includes("reference")) {
+    return "duplicate-reference";
+  }
+
+  return "duplicate";
 }
 
 function asCampaignStatus(status: string): CampaignStatusValue {
   return status as CampaignStatusValue;
+}
+
+function redirectToCampaignAdmin(campaignId: string, params: Record<string, string>): never {
+  const searchParams = new URLSearchParams(params);
+  redirect(`/admin/campaigns/${campaignId}?${searchParams.toString()}`);
+}
+
+function entryReturnParams(formData: FormData, message: string): Record<string, string> {
+  const params: Record<string, string> = { entryMessage: message };
+  const entrySearch = formString(formData, "returnEntrySearch");
+  const entryStatus = formString(formData, "returnEntryStatus");
+
+  if (entrySearch) {
+    params.entrySearch = entrySearch;
+  }
+
+  if (entryStatus && entryStatus !== "all") {
+    params.entryStatus = entryStatus;
+  }
+
+  return params;
 }
 
 async function requireEditableCampaign(campaignId: string) {
@@ -66,6 +101,40 @@ async function requireEditableCampaign(campaignId: string) {
   }
 
   return campaign;
+}
+
+async function createEntryWithTicket({
+  campaignId,
+  name,
+  email,
+  reference
+}: {
+  campaignId: string;
+  name: string;
+  email: string;
+  reference?: string;
+}) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await prisma.entry.create({
+        data: {
+          campaignId,
+          name,
+          email,
+          reference,
+          ticketCode: createTicketCode()
+        }
+      });
+    } catch (error) {
+      if (isUniqueError(error) && uniqueFailureCode(error) === "duplicate") {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error("Unable to create a unique ticket code.");
 }
 
 export async function createCampaignAction(formData: FormData) {
@@ -186,25 +255,110 @@ export async function addPrizeAction(formData: FormData) {
 export async function addEntryAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
-  await requireEditableCampaign(campaignId);
+  const campaign = await requireEditableCampaign(campaignId);
   const parsed = entrySchema.parse({
     name: formString(formData, "name"),
     email: formString(formData, "email"),
     reference: formString(formData, "reference") || undefined
   });
 
-  const entry = await prisma.entry.create({
-    data: {
+  let entry;
+  try {
+    entry = await createEntryWithTicket({
       campaignId,
       name: parsed.name,
       email: parsed.email,
-      reference: parsed.reference,
-      ticketCode: createTicketCode()
+      reference: parsed.reference
+    });
+  } catch (error) {
+    if (isUniqueError(error)) {
+      redirectToCampaignAdmin(campaignId, { entryMessage: uniqueFailureCode(error) });
     }
-  });
+
+    throw error;
+  }
 
   await writeAudit("entry.create", "Entry", entry.id, { admin: admin.email, campaignId });
   revalidatePath(`/admin/campaigns/${campaignId}`);
+  revalidatePath(`/campaigns/${campaign.slug}`);
+  redirectToCampaignAdmin(campaignId, { entryMessage: "created" });
+}
+
+export async function updateEntryAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const campaignId = formString(formData, "campaignId");
+  const entryId = formString(formData, "entryId");
+  const campaign = await requireEditableCampaign(campaignId);
+  const parsed = entryUpdateSchema.parse({
+    name: formString(formData, "name"),
+    email: formString(formData, "email"),
+    reference: formString(formData, "reference"),
+    isEligible: formData.get("isEligible") === "on"
+  });
+
+  const existing = await prisma.entry.findFirst({
+    where: { id: entryId, campaignId },
+    select: { id: true, ticketCode: true }
+  });
+
+  if (!existing) {
+    throw new Error("Entry not found.");
+  }
+
+  try {
+    await prisma.entry.update({
+      where: { id: existing.id },
+      data: {
+        name: parsed.name,
+        email: parsed.email,
+        reference: parsed.reference,
+        isEligible: parsed.isEligible
+      }
+    });
+  } catch (error) {
+    if (isUniqueError(error)) {
+      redirectToCampaignAdmin(campaignId, entryReturnParams(formData, uniqueFailureCode(error)));
+    }
+
+    throw error;
+  }
+
+  await writeAudit("entry.update", "Entry", existing.id, {
+    admin: admin.email,
+    campaignId,
+    ticketCode: existing.ticketCode
+  });
+  revalidatePath(`/admin/campaigns/${campaignId}`);
+  revalidatePath(`/campaigns/${campaign.slug}`);
+  redirectToCampaignAdmin(campaignId, entryReturnParams(formData, "updated"));
+}
+
+export async function deleteEntryAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const campaignId = formString(formData, "campaignId");
+  const entryId = formString(formData, "entryId");
+  const campaign = await requireEditableCampaign(campaignId);
+  const existing = await prisma.entry.findFirst({
+    where: { id: entryId, campaignId },
+    select: { id: true, name: true, email: true, reference: true, ticketCode: true }
+  });
+
+  if (!existing) {
+    throw new Error("Entry not found.");
+  }
+
+  await prisma.entry.delete({ where: { id: existing.id } });
+  await writeAudit("entry.delete", "Entry", existing.id, {
+    admin: admin.email,
+    campaignId,
+    name: existing.name,
+    email: existing.email,
+    reference: existing.reference,
+    ticketCode: existing.ticketCode
+  });
+  revalidatePath(`/admin/campaigns/${campaignId}`);
+  revalidatePath(`/campaigns/${campaign.slug}`);
+  redirectToCampaignAdmin(campaignId, entryReturnParams(formData, "deleted"));
 }
 
 export async function importEntriesAction(formData: FormData) {

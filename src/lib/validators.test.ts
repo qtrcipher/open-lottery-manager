@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appSettingsSchema, ticketLookupSchema } from "./validators";
+import { appSettingsSchema, entryUpdateSchema, ticketLookupSchema } from "./validators";
 
 describe("appSettingsSchema", () => {
   it("normalizes optional empty fields to null", () => {
@@ -74,5 +74,34 @@ describe("ticketLookupSchema", () => {
 
   it("rejects invalid lookup email", () => {
     expect(ticketLookupSchema.safeParse({ email: "not-an-email", reference: "" }).success).toBe(false);
+  });
+});
+
+describe("entryUpdateSchema", () => {
+  it("normalizes participant updates", () => {
+    const parsed = entryUpdateSchema.parse({
+      name: "  Fatima Noor  ",
+      email: " FATIMA@example.COM ",
+      reference: "",
+      isEligible: false
+    });
+
+    expect(parsed).toEqual({
+      name: "Fatima Noor",
+      email: "fatima@example.com",
+      reference: null,
+      isEligible: false
+    });
+  });
+
+  it("rejects invalid participant update fields", () => {
+    expect(
+      entryUpdateSchema.safeParse({
+        name: "",
+        email: "not-an-email",
+        reference: "x".repeat(121),
+        isEligible: true
+      }).success
+    ).toBe(false);
   });
 });

@@ -2,15 +2,18 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { Download } from "lucide-react";
+import type { Prisma } from "@prisma/client";
 import {
   addEntryAction,
   addPrizeAction,
   archiveCampaignAction,
   deleteCampaignAction,
+  deleteEntryAction,
   importEntriesAction,
   restoreCampaignAction,
   runDrawAction,
-  updateCampaignAction
+  updateCampaignAction,
+  updateEntryAction
 } from "@/app/admin/actions";
 import { Label, PageShell, Panel, StatusBadge, SubmitButton, TextArea, TextInput } from "@/components/ui";
 import { canDeleteCampaign, canEditCampaignSetup } from "@/lib/campaign-lifecycle";
@@ -38,15 +41,67 @@ function ExportLink({ href, children }: { href: string; children: ReactNode }) {
   );
 }
 
-export default async function CampaignAdminPage({ params }: { params: Promise<{ id: string }> }) {
+function entryMessageText(message?: string): string | null {
+  if (message === "created") {
+    return "Participant added.";
+  }
+
+  if (message === "updated") {
+    return "Participant updated.";
+  }
+
+  if (message === "deleted") {
+    return "Participant deleted.";
+  }
+
+  if (message === "duplicate-email") {
+    return "Another participant already uses this email.";
+  }
+
+  if (message === "duplicate-reference") {
+    return "Another participant already uses this reference.";
+  }
+
+  if (message === "duplicate") {
+    return "This participant duplicates an existing record.";
+  }
+
+  return null;
+}
+
+function entryStatusFilter(value?: string): "all" | "eligible" | "ineligible" {
+  if (value === "eligible" || value === "ineligible") {
+    return value;
+  }
+
+  return "all";
+}
+
+function EntryReturnFields({ entrySearch, entryStatus }: { entrySearch: string; entryStatus: string }) {
+  return (
+    <>
+      <input name="returnEntrySearch" type="hidden" value={entrySearch} />
+      <input name="returnEntryStatus" type="hidden" value={entryStatus} />
+    </>
+  );
+}
+
+export default async function CampaignAdminPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ entrySearch?: string; entryStatus?: string; entryMessage?: string }>;
+}) {
   await requireAdmin();
-  const resolvedParams = await params;
+  const [resolvedParams, resolvedSearchParams] = await Promise.all([params, searchParams]);
+  const entrySearch = String(resolvedSearchParams.entrySearch ?? "").trim();
+  const selectedEntryStatus = entryStatusFilter(resolvedSearchParams.entryStatus);
 
   const campaign = await prisma.campaign.findUnique({
     where: { id: resolvedParams.id },
     include: {
       prizes: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
-      entries: { orderBy: { createdAt: "desc" }, take: 10 },
       draws: {
         orderBy: { createdAt: "desc" },
         include: {
@@ -69,6 +124,30 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
   const isArchived = campaign.status === "ARCHIVED";
   const canEditSetup = canEditCampaignSetup(campaign.status, campaign._count.draws);
   const canDelete = canDeleteCampaign(campaign.status, campaign._count.draws);
+  const entryWhere: Prisma.EntryWhereInput = {
+    campaignId: campaign.id,
+    ...(selectedEntryStatus === "eligible" ? { isEligible: true } : {}),
+    ...(selectedEntryStatus === "ineligible" ? { isEligible: false } : {}),
+    ...(entrySearch
+      ? {
+          OR: [
+            { name: { contains: entrySearch } },
+            { email: { contains: entrySearch.toLowerCase() } },
+            { reference: { contains: entrySearch } },
+            { ticketCode: { contains: entrySearch } }
+          ]
+        }
+      : {})
+  };
+  const [entries, eligibleEntryCount, ineligibleEntryCount] = await Promise.all([
+    prisma.entry.findMany({
+      where: entryWhere,
+      orderBy: { createdAt: "desc" }
+    }),
+    prisma.entry.count({ where: { campaignId: campaign.id, isEligible: true } }),
+    prisma.entry.count({ where: { campaignId: campaign.id, isEligible: false } })
+  ]);
+  const entryMessage = entryMessageText(resolvedSearchParams.entryMessage);
 
   return (
     <PageShell>
@@ -243,7 +322,7 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      <section className="mt-5 grid gap-5 lg:grid-cols-2">
+      <section className="mt-5 grid gap-5 lg:grid-cols-[0.75fr_1.25fr]">
         <Panel>
           <h2 className="text-xl font-semibold">Prizes</h2>
           <div className="mt-4 space-y-3">
@@ -264,20 +343,160 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
         </Panel>
 
         <Panel>
-          <h2 className="text-xl font-semibold">Latest entries</h2>
-          <div className="mt-4 space-y-3">
-            {campaign.entries.length === 0 ? (
-              <p className="text-sm text-ink/68">No entries added.</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Participants</h2>
+              <p className="mt-1 text-sm text-ink/64">Search, review, and manage campaign entries before the draw.</p>
+            </div>
+            {!canEditSetup ? <span className="rounded-full border border-line bg-paper px-3 py-1 text-xs font-semibold uppercase text-ink/60">Read only</span> : null}
+          </div>
+
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-4">
+            <div className="rounded-md border border-line bg-paper/70 p-3">
+              <dt className="text-ink/60">Total</dt>
+              <dd className="mt-1 text-xl font-bold">{campaign._count.entries}</dd>
+            </div>
+            <div className="rounded-md border border-line bg-paper/70 p-3">
+              <dt className="text-ink/60">Eligible</dt>
+              <dd className="mt-1 text-xl font-bold text-moss">{eligibleEntryCount}</dd>
+            </div>
+            <div className="rounded-md border border-line bg-paper/70 p-3">
+              <dt className="text-ink/60">Ineligible</dt>
+              <dd className="mt-1 text-xl font-bold text-brick">{ineligibleEntryCount}</dd>
+            </div>
+            <div className="rounded-md border border-line bg-paper/70 p-3">
+              <dt className="text-ink/60">Visible</dt>
+              <dd className="mt-1 text-xl font-bold">{entries.length}</dd>
+            </div>
+          </dl>
+
+          {entryMessage ? (
+            <p
+              className={`mt-4 rounded-md border p-3 text-sm ${
+                resolvedSearchParams.entryMessage?.startsWith("duplicate")
+                  ? "border-brick/30 bg-brick/10 text-brick"
+                  : "border-moss/30 bg-moss/10 text-moss"
+              }`}
+            >
+              {entryMessage}
+            </p>
+          ) : null}
+
+          <form className="mt-4 grid gap-3 md:grid-cols-[1fr_12rem_auto_auto] md:items-end" method="get">
+            <div>
+              <Label>Search participants</Label>
+              <TextInput name="entrySearch" defaultValue={entrySearch} placeholder="Name, email, ticket, or reference" />
+            </div>
+            <div>
+              <Label>Status</Label>
+              <select
+                className="min-h-11 w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm"
+                name="entryStatus"
+                defaultValue={selectedEntryStatus}
+              >
+                <option value="all">All entries</option>
+                <option value="eligible">Eligible</option>
+                <option value="ineligible">Ineligible</option>
+              </select>
+            </div>
+            <SubmitButton>Filter</SubmitButton>
+            <Link
+              className="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+              href={`/admin/campaigns/${campaign.id}`}
+            >
+              Reset
+            </Link>
+          </form>
+
+          <div className="mt-4 overflow-x-auto">
+            {entries.length === 0 ? (
+              <p className="rounded-md border border-line bg-paper/70 p-4 text-sm text-ink/68">No participants match the current filters.</p>
             ) : (
-              campaign.entries.map((entry) => (
-                <div key={entry.id} className="rounded-md border border-line bg-white p-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="font-semibold">{entry.name}</h3>
-                    <span className="font-mono text-xs text-ink/58">{entry.ticketCode}</span>
-                  </div>
-                  <p className="mt-1 text-sm text-ink/64">{entry.email}</p>
-                </div>
-              ))
+              <table className="min-w-[980px] w-full border-separate border-spacing-0 text-left text-sm">
+                <thead>
+                  <tr className="text-xs uppercase text-ink/58">
+                    <th className="border-b border-line px-3 py-2 font-semibold">Participant</th>
+                    <th className="border-b border-line px-3 py-2 font-semibold">Reference</th>
+                    <th className="border-b border-line px-3 py-2 font-semibold">Ticket</th>
+                    <th className="border-b border-line px-3 py-2 font-semibold">Eligible</th>
+                    <th className="border-b border-line px-3 py-2 font-semibold">Entered</th>
+                    <th className="border-b border-line px-3 py-2 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map((entry) => {
+                    const updateFormId = `entry-update-${entry.id}`;
+
+                    return (
+                      <tr key={entry.id} className="align-top">
+                        <td className="border-b border-line px-3 py-3">
+                          {canEditSetup ? (
+                            <div className="grid gap-2">
+                              <TextInput aria-label="Participant name" form={updateFormId} name="name" required defaultValue={entry.name} maxLength={120} />
+                              <TextInput aria-label="Participant email" form={updateFormId} name="email" type="email" required defaultValue={entry.email} maxLength={200} />
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="font-semibold">{entry.name}</p>
+                              <p className="mt-1 text-ink/64">{entry.email}</p>
+                            </div>
+                          )}
+                        </td>
+                        <td className="border-b border-line px-3 py-3">
+                          {canEditSetup ? (
+                            <TextInput
+                              aria-label="Participant reference"
+                              form={updateFormId}
+                              name="reference"
+                              defaultValue={entry.reference ?? ""}
+                              maxLength={120}
+                              placeholder="Optional"
+                            />
+                          ) : (
+                            <span className="text-ink/70">{entry.reference || "None"}</span>
+                          )}
+                        </td>
+                        <td className="border-b border-line px-3 py-3">
+                          <span className="break-all font-mono text-xs text-ink/64">{entry.ticketCode}</span>
+                        </td>
+                        <td className="border-b border-line px-3 py-3">
+                          {canEditSetup ? (
+                            <label className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold">
+                              <input className="h-4 w-4" form={updateFormId} name="isEligible" type="checkbox" defaultChecked={entry.isEligible} />
+                              Eligible
+                            </label>
+                          ) : (
+                            <span className={`font-semibold ${entry.isEligible ? "text-moss" : "text-brick"}`}>
+                              {entry.isEligible ? "Eligible" : "Ineligible"}
+                            </span>
+                          )}
+                        </td>
+                        <td className="border-b border-line px-3 py-3 text-ink/64">{entry.createdAt.toLocaleString()}</td>
+                        <td className="border-b border-line px-3 py-3">
+                          {canEditSetup ? (
+                            <div className="flex flex-wrap gap-2">
+                              <form id={updateFormId} action={updateEntryAction}>
+                                <input name="campaignId" type="hidden" value={campaign.id} />
+                                <input name="entryId" type="hidden" value={entry.id} />
+                                <EntryReturnFields entrySearch={entrySearch} entryStatus={selectedEntryStatus} />
+                                <SubmitButton>Save</SubmitButton>
+                              </form>
+                              <form action={deleteEntryAction}>
+                                <input name="campaignId" type="hidden" value={campaign.id} />
+                                <input name="entryId" type="hidden" value={entry.id} />
+                                <EntryReturnFields entrySearch={entrySearch} entryStatus={selectedEntryStatus} />
+                                <SubmitButton variant="danger">Delete</SubmitButton>
+                              </form>
+                            </div>
+                          ) : (
+                            <span className="text-ink/54">Locked</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
         </Panel>

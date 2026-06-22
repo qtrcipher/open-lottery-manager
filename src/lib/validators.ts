@@ -65,6 +65,13 @@ export const entrySchema = z.object({
   reference: z.string().max(120).optional()
 });
 
+export const entryUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  email: z.string().trim().email().max(200).transform((value) => value.toLowerCase()),
+  reference: z.preprocess(emptyToNull, z.string().max(120).nullable()),
+  isEligible: z.boolean()
+});
+
 export const publicEntrySchema = entrySchema;
 
 export const ticketLookupSchema = z.object({
