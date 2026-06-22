@@ -26,6 +26,26 @@ npm run dev
 
 Update `.env` with the generated `ADMIN_PASSWORD_HASH`, a strong `AUTH_SECRET`, and your admin email. Then visit `http://localhost:3000/admin/login`.
 
+## Demo Data
+
+Load a sample campaign with prizes, entries, completed draw results, and audit records:
+
+```bash
+npm run db:seed
+```
+
+The seed is idempotent and only replaces the fixed demo campaign at `/campaigns/demo-summer-rewards`.
+
+## Screenshots
+
+![Public home showing the demo campaign](docs/screenshots/public-home.png)
+
+![Admin dashboard listing campaigns](docs/screenshots/admin-dashboard.png)
+
+![Admin campaign management screen](docs/screenshots/campaign-management.png)
+
+![Public draw results with winners and seed hash](docs/screenshots/public-results.png)
+
 ## Run With Docker
 
 Docker Compose is the recommended self-hosting path for small deployments. It stores SQLite data in a named volume so campaign and draw records survive container restarts.
@@ -75,4 +95,6 @@ Do not use this app to operate a real-money lottery, gambling product, paid raff
 - `npm run lint`: run Next.js lint checks.
 - `npm test`: run automated tests.
 - `npm run db:push`: apply the Prisma schema to the configured SQLite database.
+- `npm run db:seed`: load the demo campaign.
 - `npm run hash-password -- "password"`: generate an admin password hash.
+- `npm run screenshots`: capture README screenshots from a running local app.
