@@ -4,6 +4,7 @@
 node_modules/
 coverage/
 dist/
+backups/
 dev.db
 dev.db-journal
 prisma/dev.db

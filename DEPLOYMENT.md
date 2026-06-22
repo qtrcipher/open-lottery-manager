@@ -66,24 +66,15 @@ docker volume ls | grep lottery
 
 ## Backup And Restore
 
-Create a local backup directory:
+Back up the SQLite database with the helper script:
 
 ```bash
-mkdir -p backups
+npm run backup
 ```
 
-Back up the SQLite database while the app is stopped:
+The script stops the production app if it is running, copies `/app/data/prod.db` from the Docker volume to `backups/prod-YYYYMMDD-HHMMSS.db`, verifies the backup is non-empty, and restarts the app if it stopped it.
 
-```bash
-docker compose -f docker-compose.prod.yml stop app
-docker run --rm \
-  -v lottery_lottery-data:/data:ro \
-  -v "$PWD/backups:/backup" \
-  alpine sh -c 'cp /data/prod.db "/backup/prod-$(date +%Y%m%d-%H%M%S).db"'
-docker compose -f docker-compose.prod.yml up -d
-```
-
-If your volume name differs, replace `lottery_lottery-data` with the name from `docker volume ls`.
+For manual restore commands, if your volume name differs, replace `lottery_lottery-data` with the name from `docker volume ls`.
 
 Restore from a backup:
 

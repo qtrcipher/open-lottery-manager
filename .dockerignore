@@ -4,6 +4,7 @@
 .github
 .next
 coverage
+backups
 dev.db
 dev.db-journal
 dist
