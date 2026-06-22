@@ -12,7 +12,7 @@ import {
   restoreCampaignState,
   type CampaignStatusValue
 } from "@/lib/campaign-lifecycle";
-import { parseEntriesCsv } from "@/lib/csv";
+import { type CsvImportError, type CsvImportRow, type CsvImportSummary, validateEntriesCsv } from "@/lib/csv";
 import { drawAlgorithmVersion, selectWinners } from "@/lib/draw";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
@@ -84,6 +84,48 @@ function entryReturnParams(formData: FormData, message: string): Record<string, 
   }
 
   return params;
+}
+
+export type EntryImportActionState = {
+  status: "idle" | "preview" | "imported" | "error";
+  message: string;
+  csv: string;
+  summary: CsvImportSummary;
+  errors: CsvImportError[];
+  previewRows: CsvImportRow[];
+};
+
+function emptyImportSummary(): CsvImportSummary {
+  return {
+    totalRows: 0,
+    validRows: 0,
+    errorRows: 0
+  };
+}
+
+function importState({
+  status,
+  message,
+  csv,
+  summary = emptyImportSummary(),
+  errors = [],
+  previewRows = []
+}: {
+  status: EntryImportActionState["status"];
+  message: string;
+  csv: string;
+  summary?: CsvImportSummary;
+  errors?: CsvImportError[];
+  previewRows?: CsvImportRow[];
+}): EntryImportActionState {
+  return {
+    status,
+    message,
+    csv,
+    summary,
+    errors,
+    previewRows
+  };
 }
 
 async function requireEditableCampaign(campaignId: string) {
@@ -428,45 +470,116 @@ export async function deleteEntryAction(formData: FormData) {
   redirectToCampaignAdmin(campaignId, entryReturnParams(formData, "deleted"));
 }
 
-export async function importEntriesAction(formData: FormData) {
-  const admin = await requireAdmin();
+export async function previewEntriesImportAction(_previousState: EntryImportActionState, formData: FormData): Promise<EntryImportActionState> {
+  await requireAdmin();
   const campaignId = formString(formData, "campaignId");
-  await requireEditableCampaign(campaignId);
   const csv = String(formData.get("csv") ?? "");
-  const parsedEntries = parseEntriesCsv(csv);
-  const seenEmails = new Set<string>();
-  const seenReferences = new Set<string>();
+  await requireEditableCampaign(campaignId);
 
-  for (const entry of parsedEntries) {
-    if (seenEmails.has(entry.email)) {
-      throw new Error(`Duplicate email in CSV: ${entry.email}`);
-    }
-    seenEmails.add(entry.email);
-
-    if (entry.reference) {
-      if (seenReferences.has(entry.reference)) {
-        throw new Error(`Duplicate reference in CSV: ${entry.reference}`);
-      }
-      seenReferences.add(entry.reference);
-    }
+  if (!csv.trim()) {
+    return importState({
+      status: "error",
+      message: "Paste CSV rows before previewing the import.",
+      csv
+    });
   }
 
-  const created = await prisma.$transaction(
-    parsedEntries.map((entry) =>
-      prisma.entry.create({
-        data: {
-          campaignId,
-          name: entry.name,
-          email: entry.email,
-          reference: entry.reference,
-          ticketCode: createTicketCode()
-        }
-      })
-    )
-  );
+  const existingEntries = await prisma.entry.findMany({
+    where: { campaignId },
+    select: { email: true, reference: true }
+  });
+  const validation = validateEntriesCsv(csv, existingEntries);
+  const message =
+    validation.summary.validRows === 0
+      ? "No rows are ready to import."
+      : validation.summary.errorRows > 0
+        ? `${validation.summary.validRows} rows are ready to import and ${validation.summary.errorRows} rows will be skipped.`
+        : `${validation.summary.validRows} rows are ready to import.`;
 
-  await writeAudit("entry.import", "Campaign", campaignId, { admin: admin.email, count: created.length });
+  return importState({
+    status: "preview",
+    message,
+    csv,
+    summary: validation.summary,
+    errors: validation.errorRows,
+    previewRows: validation.validRows
+  });
+}
+
+export async function confirmEntriesImportAction(_previousState: EntryImportActionState, formData: FormData): Promise<EntryImportActionState> {
+  const admin = await requireAdmin();
+  const campaignId = formString(formData, "campaignId");
+  const campaign = await requireEditableCampaign(campaignId);
+  const csv = String(formData.get("csv") ?? "");
+
+  if (!csv.trim()) {
+    return importState({
+      status: "error",
+      message: "Paste CSV rows before importing.",
+      csv
+    });
+  }
+
+  const existingEntries = await prisma.entry.findMany({
+    where: { campaignId },
+    select: { email: true, reference: true }
+  });
+  const validation = validateEntriesCsv(csv, existingEntries);
+
+  if (validation.validRows.length === 0) {
+    return importState({
+      status: "error",
+      message: "No valid rows were available to import.",
+      csv,
+      summary: validation.summary,
+      errors: validation.errorRows,
+      previewRows: validation.validRows
+    });
+  }
+
+  const created = await prisma.$transaction(async (tx) => {
+    const entries = [];
+
+    for (const entry of validation.validRows) {
+      entries.push(
+        await tx.entry.create({
+          data: {
+            campaignId,
+            name: entry.name,
+            email: entry.email,
+            reference: entry.reference,
+            ticketCode: createTicketCode()
+          }
+        })
+      );
+    }
+
+    return entries;
+  });
+
+  await writeAudit("entry.import", "Campaign", campaignId, {
+    admin: admin.email,
+    importedCount: created.length,
+    skippedCount: validation.summary.errorRows
+  });
   revalidatePath(`/admin/campaigns/${campaignId}`);
+  revalidatePath(`/campaigns/${campaign.slug}`);
+
+  return importState({
+    status: "imported",
+    message:
+      validation.summary.errorRows > 0
+        ? `${created.length} rows imported. ${validation.summary.errorRows} rows were skipped.`
+        : `${created.length} rows imported.`,
+    csv: "",
+    summary: {
+      totalRows: validation.summary.totalRows,
+      validRows: created.length,
+      errorRows: validation.summary.errorRows
+    },
+    errors: validation.errorRows,
+    previewRows: []
+  });
 }
 
 export async function runDrawAction(formData: FormData) {

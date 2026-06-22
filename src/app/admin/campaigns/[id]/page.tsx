@@ -10,13 +10,13 @@ import {
   deleteCampaignAction,
   deleteEntryAction,
   deletePrizeAction,
-  importEntriesAction,
   restoreCampaignAction,
   runDrawAction,
   updateCampaignAction,
   updateEntryAction,
   updatePrizeAction
 } from "@/app/admin/actions";
+import { CsvImportForm } from "@/components/csv-import-form";
 import { Label, PageShell, Panel, StatusBadge, SubmitButton, TextArea, TextInput } from "@/components/ui";
 import { canDeleteCampaign, canEditCampaignSetup } from "@/lib/campaign-lifecycle";
 import { prisma } from "@/lib/prisma";
@@ -636,14 +636,7 @@ export default async function CampaignAdminPage({
 
           <Panel>
             <h2 className="text-xl font-semibold">CSV import</h2>
-            <form action={importEntriesAction} className="mt-4 space-y-4">
-              <input name="campaignId" type="hidden" value={campaign.id} />
-              <div>
-                <Label>CSV rows</Label>
-                <TextArea name="csv" required placeholder={"name,email,reference\nFatima Noor,fatima@example.com,INV-1001"} />
-              </div>
-              <SubmitButton>Import entries</SubmitButton>
-            </form>
+            <CsvImportForm campaignId={campaign.id} />
           </Panel>
         </section>
       ) : (
