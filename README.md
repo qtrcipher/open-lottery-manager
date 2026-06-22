@@ -88,6 +88,8 @@ docker compose up --build
 
 Open `http://localhost:3000/admin/login`. The Compose service uses `DATABASE_URL=file:/app/data/prod.db` and persists that database in the `lottery-data` volume.
 
+For production setup, backups, reverse proxy notes, and upgrades, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## Production Self-Hosting Checklist
 
 - Generate a long random `AUTH_SECRET`; never reuse the example value.
