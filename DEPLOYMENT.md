@@ -43,6 +43,12 @@ The app service uses `/api/health` for its container healthcheck. A healthy cont
 Check runtime health:
 
 ```bash
+npm run smoke:deploy -- http://localhost:3000
+```
+
+The smoke test calls `/api/health` and verifies HTTP `200`, app status `ok`, and database status `ok`. To inspect the raw response manually, run:
+
+```bash
 curl http://localhost:3000/api/health
 ```
 
@@ -131,7 +137,7 @@ docker compose -f docker-compose.prod.yml logs -f app
 After upgrade, verify:
 
 - `docker compose -f docker-compose.prod.yml ps` shows the app service as healthy,
-- `curl http://localhost:3000/api/health` returns HTTP `200`,
+- `npm run smoke:deploy -- http://localhost:3000` passes,
 - admin login works,
 - campaign lists load,
 - public campaign pages load,
@@ -147,5 +153,5 @@ After upgrade, verify:
 - Confirm database backups and restore steps.
 - Confirm HTTPS and trusted proxy headers.
 - Confirm `docker compose -f docker-compose.prod.yml ps` shows the app service as healthy.
-- Confirm `/api/health` returns HTTP `200`.
+- Confirm `npm run smoke:deploy -- http://localhost:3000` passes.
 - Run a test campaign and draw before using real participant data.
