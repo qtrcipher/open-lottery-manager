@@ -162,6 +162,7 @@ This repository is public and free to use under the MIT License. It is provided 
 - `npm run db:push`: apply the Prisma schema to the configured SQLite database.
 - `npm run db:seed`: load the demo campaign.
 - `npm run backup`: copy the production SQLite database from Docker storage into `backups/`.
+- `npm run restore -- backups/prod-YYYYMMDD-HHMMSS.db --confirm`: restore a production SQLite backup.
 - `npm run hash-password -- "password"`: generate an admin password hash.
 - `npm run smoke:deploy -- http://localhost:3000`: verify a deployed app and database health check.
 - `npm run screenshots`: capture README screenshots from a running local app.

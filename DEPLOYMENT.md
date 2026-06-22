@@ -74,18 +74,13 @@ npm run backup
 
 The script stops the production app if it is running, copies `/app/data/prod.db` from the Docker volume to `backups/prod-YYYYMMDD-HHMMSS.db`, verifies the backup is non-empty, and restarts the app if it stopped it.
 
-For manual restore commands, if your volume name differs, replace `lottery_lottery-data` with the name from `docker volume ls`.
-
 Restore from a backup:
 
 ```bash
-docker compose -f docker-compose.prod.yml stop app
-docker run --rm \
-  -v lottery_lottery-data:/data \
-  -v "$PWD/backups:/backup:ro" \
-  alpine sh -c 'cp /backup/prod-YYYYMMDD-HHMMSS.db /data/prod.db'
-docker compose -f docker-compose.prod.yml up -d
+npm run restore -- backups/prod-YYYYMMDD-HHMMSS.db --confirm
 ```
+
+The restore script accepts only non-empty `backups/prod-YYYYMMDD-HHMMSS.db` files, stops the production app if it is running, replaces `/app/data/prod.db`, and restarts the app if it stopped it.
 
 Always test restore steps on a copy before relying on them for production.
 
