@@ -1,4 +1,6 @@
-import { PlusCircle } from "lucide-react";
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { Download, PlusCircle } from "lucide-react";
 import { restoreCampaignAction } from "@/app/admin/actions";
 import { ButtonLink, PageShell, Panel, StatusBadge, SubmitButton } from "@/components/ui";
 import { checkDatabaseHealth, createHealthPayload } from "@/lib/health";
@@ -6,6 +8,18 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
+
+function ExportLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+      href={href}
+    >
+      <Download aria-hidden="true" size={16} />
+      {children}
+    </Link>
+  );
+}
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -95,6 +109,11 @@ export default async function AdminDashboard() {
             <dd className="mt-2 break-all font-mono text-xs text-ink/70">npm run smoke:deploy -- http://localhost:3000</dd>
           </div>
         </dl>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <ExportLink href="/admin/exports/entries">All entries CSV</ExportLink>
+          <ExportLink href="/admin/exports/winners">All winners CSV</ExportLink>
+          <ExportLink href="/admin/exports/audit">All audit CSV</ExportLink>
+        </div>
       </Panel>
 
       {activeCampaigns.length === 0 ? (
