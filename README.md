@@ -1,8 +1,23 @@
 # Open Lottery Manager
 
+[![CI](https://github.com/qtrcipher/open-lottery-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/qtrcipher/open-lottery-manager/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Open Lottery Manager is a self-hosted web app for lawful prize campaigns, raffles, promotional draws, and licensed lottery-style operations. It gives operators a simple admin dashboard, public campaign pages, auditable winner selection, and export-friendly results.
 
 This project is software only. Operators are responsible for complying with all applicable licensing, age, tax, prize, advertising, consumer protection, and gambling laws in the places where they use it.
+
+## What This Is
+
+- A free, self-hosted campaign manager for operators who already know their promotion is lawful.
+- A Next.js, Prisma, SQLite, and Docker app that can be run on your own infrastructure.
+- A tool for managing entries, prizes, public campaign pages, draw records, and CSV exports.
+
+## What This Is Not
+
+- Not a hosted lottery service, payment processor, wallet, KYC provider, or compliance product.
+- Not legal advice and not a substitute for licensing, regulatory review, or independent auditing.
+- Not designed for real-money gambling without additional controls and jurisdiction-specific review.
 
 ## Features
 
@@ -73,6 +88,16 @@ docker compose up --build
 
 Open `http://localhost:3000/admin/login`. The Compose service uses `DATABASE_URL=file:/app/data/prod.db` and persists that database in the `lottery-data` volume.
 
+## Production Self-Hosting Checklist
+
+- Generate a long random `AUTH_SECRET`; never reuse the example value.
+- Generate `ADMIN_PASSWORD_HASH` with `npm run hash-password -- "your-password"`.
+- Use Docker Compose or another persistent volume for SQLite, and back up the database before draws and before upgrades.
+- Put the app behind HTTPS and a trusted reverse proxy. Control forwarded IP headers before relying on rate limits.
+- Set a real `ADMIN_EMAIL`, configure support details in `/admin/settings`, and replace demo rules before publishing campaigns.
+- Confirm legal, tax, age, prize, advertising, and licensing requirements before accepting public entries.
+- Keep dependencies updated and review `SECURITY.md` before reporting vulnerabilities.
+
 ## CSV Import Format
 
 Use a header row with these columns:
@@ -120,6 +145,10 @@ Admins can customize the operator identity at `/admin/settings`. Configure the p
 ## Legal And Compliance Notice
 
 Do not use this app to operate a real-money lottery, gambling product, paid raffle, or regulated promotion unless you have confirmed that your use is lawful. This app does not provide KYC, geolocation, payment processing, tax reporting, responsible gaming controls, or regulatory certification.
+
+## Repository Status
+
+This repository is public and free to use under the MIT License. It is provided as self-hosted software for operators and developers; it is not a managed service and does not include regulatory certification.
 
 ## Scripts
 

@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest an improvement for lawful self-hosted campaign management.
+title: "Feature: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Requests involving payments, KYC, geolocation, gambling controls, or regulated-money flows need clear legal and security context.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What operator or participant problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the desired behavior and affected pages or workflows.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Public campaign pages
+        - Admin campaign management
+        - Entries and CSV import/export
+        - Draw and verification
+        - Deployment and operations
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: compliance
+    attributes:
+      label: Compliance or security considerations
+      description: Note any legal, privacy, abuse, or security impact.
+    validations:
+      required: false

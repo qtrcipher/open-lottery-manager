@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible problem in Open Lottery Manager.
+title: "Bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report vulnerabilities, secrets, or exploit details here. Follow SECURITY.md for private reporting.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include commands, routes, campaign state, and sample CSV content when relevant.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, deployment method, browser, and OS.
+      placeholder: "Node 22, Docker Compose, Chrome, Ubuntu"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste safe logs or attach screenshots. Remove secrets and participant data.
+    validations:
+      required: false
