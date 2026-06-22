@@ -2,6 +2,23 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.7 - 2026-06-22
+
+Admin operations documentation panel.
+
+### Added
+
+- Admin dashboard Operations panel with backup, restore, and deployment smoke-test command references.
+- Deployment guide link from the admin dashboard.
+
+### Changed
+
+- Admin dashboard now surfaces host-side maintenance documentation without adding browser-triggered maintenance actions.
+
+### Operations
+
+- Admins can find backup, restore, and smoke-test commands from the dashboard context.
+
 ## v0.1.6 - 2026-06-22
 
 Admin audit log filtering.
