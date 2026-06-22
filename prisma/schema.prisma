@@ -107,3 +107,17 @@ model AuditLog {
   metadata   String?
   createdAt  DateTime @default(now())
 }
+
+model RateLimitBucket {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  subjectHash String
+  action      String
+  count       Int      @default(0)
+  windowStart DateTime
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([expiresAt])
+}

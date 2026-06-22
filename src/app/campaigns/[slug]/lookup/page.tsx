@@ -8,6 +8,18 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
+function lookupStatusMessage(status?: string): string | null {
+  if (status === "rate-limited") {
+    return "Too many lookup attempts. Try again later.";
+  }
+
+  if (status === "not-found" || status === "found") {
+    return "No matching entry was found.";
+  }
+
+  return null;
+}
+
 export default async function TicketLookupPage({
   params,
   searchParams
@@ -28,6 +40,7 @@ export default async function TicketLookupPage({
     notFound();
   }
 
+  const lookupMessage = lookupStatusMessage(resolvedSearchParams.status);
   const entry =
     resolvedSearchParams.status === "found" && resolvedSearchParams.ticket
       ? await prisma.entry.findFirst({
@@ -56,6 +69,10 @@ export default async function TicketLookupPage({
           <h2 className="text-xl font-semibold">Find my ticket</h2>
           <form action={lookupTicketAction} className="mt-4 space-y-4">
             <input name="slug" type="hidden" value={campaign.slug} />
+            <div className="hp-field" aria-hidden="true">
+              <label htmlFor="lookup-website">Website</label>
+              <input id="lookup-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+            </div>
             <div>
               <Label>Email</Label>
               <TextInput name="email" type="email" required maxLength={200} />
@@ -85,8 +102,8 @@ export default async function TicketLookupPage({
                 <dd className="font-semibold">{entry.createdAt.toLocaleString()}</dd>
               </div>
             </dl>
-          ) : resolvedSearchParams.status === "not-found" || resolvedSearchParams.status === "found" ? (
-            <p className="mt-4 rounded-md border border-brick/30 bg-brick/10 p-3 text-sm text-brick">No matching entry was found.</p>
+          ) : lookupMessage ? (
+            <p className="mt-4 rounded-md border border-brick/30 bg-brick/10 p-3 text-sm text-brick">{lookupMessage}</p>
           ) : (
             <p className="mt-4 text-sm leading-6 text-ink/70">Enter the email used for your campaign entry. If the operator gave you a reference, include it to narrow the lookup.</p>
           )}

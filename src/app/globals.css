@@ -56,6 +56,15 @@ select {
   border-color: var(--brand-color);
 }
 
+.hp-field {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

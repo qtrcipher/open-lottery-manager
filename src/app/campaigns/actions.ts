@@ -2,11 +2,16 @@
 
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { canAcceptPublicEntries, type CampaignStatusValue } from "@/lib/campaign-lifecycle";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIpFromHeaders, isHoneypotFilled } from "@/lib/rate-limit";
 import { createTicketCode } from "@/lib/tickets";
 import { publicEntrySchema, ticketLookupSchema } from "@/lib/validators";
+
+const publicEntryRateLimit = { limit: 5, windowSeconds: 10 * 60 };
+const ticketLookupRateLimit = { limit: 10, windowSeconds: 10 * 60 };
 
 function formString(formData: FormData, key: string): string {
   return String(formData.get(key) ?? "").trim();
@@ -78,6 +83,21 @@ export async function createPublicEntryAction(formData: FormData) {
   const slug = formString(formData, "slug");
   if (!slug) {
     redirect("/");
+  }
+
+  if (isHoneypotFilled(formData)) {
+    redirectToCampaign(slug, { entry: "invalid" });
+  }
+
+  const requestHeaders = await headers();
+  const entryRateLimit = await checkRateLimit({
+    action: "public_entry",
+    subject: `${slug}:${getClientIpFromHeaders(requestHeaders)}`,
+    ...publicEntryRateLimit
+  });
+
+  if (!entryRateLimit.allowed) {
+    redirectToCampaign(slug, { entry: "rate-limited" });
   }
 
   const parsed = publicEntrySchema.safeParse({
@@ -155,6 +175,21 @@ export async function lookupTicketAction(formData: FormData) {
   const slug = formString(formData, "slug");
   if (!slug) {
     redirect("/");
+  }
+
+  if (isHoneypotFilled(formData)) {
+    redirectToLookup(slug, { status: "not-found" });
+  }
+
+  const requestHeaders = await headers();
+  const lookupRateLimit = await checkRateLimit({
+    action: "ticket_lookup",
+    subject: `${slug}:${getClientIpFromHeaders(requestHeaders)}`,
+    ...ticketLookupRateLimit
+  });
+
+  if (!lookupRateLimit.allowed) {
+    redirectToLookup(slug, { status: "rate-limited" });
   }
 
   const parsed = ticketLookupSchema.safeParse({

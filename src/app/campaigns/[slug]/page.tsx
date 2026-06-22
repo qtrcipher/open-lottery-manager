@@ -50,6 +50,10 @@ function publicEntryErrorMessage(error?: string): string | null {
     return "Entries are not currently open for this campaign.";
   }
 
+  if (error === "rate-limited") {
+    return "Too many entry attempts. Try again later.";
+  }
+
   if (error === "duplicate") {
     return "This entry could not be created because it duplicates an existing record.";
   }
@@ -167,6 +171,10 @@ export default async function CampaignPage({
               {entryError ? <p className="mt-4 rounded-md border border-brick/30 bg-brick/10 p-3 text-sm text-brick">{entryError}</p> : null}
               <form action={createPublicEntryAction} className="mt-4 grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
                 <input name="slug" type="hidden" value={campaign.slug} />
+                <div className="hp-field" aria-hidden="true">
+                  <label htmlFor="entry-website">Website</label>
+                  <input id="entry-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+                </div>
                 <div>
                   <Label>Name</Label>
                   <TextInput name="name" required maxLength={120} />

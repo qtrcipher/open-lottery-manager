@@ -91,6 +91,8 @@ Admins can enable public entries per campaign. Public entry forms appear only wh
 
 Participants can revisit `/campaigns/[slug]/lookup` to find their ticket code with the email address used for entry and an optional reference.
 
+Public entry and lookup forms include basic abuse protection: a hidden honeypot field and per-campaign IP rate limits stored in the SQLite database. For high-traffic or regulated deployments, put the app behind a trusted reverse proxy, WAF, or CAPTCHA service, and make sure forwarded IP headers are controlled by your proxy.
+
 ## CSV Export
 
 Campaign admins can download CSV records from the campaign management page:
