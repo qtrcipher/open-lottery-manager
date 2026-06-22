@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum CampaignStatus {
+  DRAFT
+  OPEN
+  LOCKED
+  DRAWN
+  ARCHIVED
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  title       String
+  slug        String         @unique
+  description String
+  rules       String
+  status      CampaignStatus @default(DRAFT)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  isPublic    Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  prizes      Prize[]
+  entries     Entry[]
+  draws       Draw[]
+}
+
+model Prize {
+  id          String   @id @default(cuid())
+  campaignId  String
+  name        String
+  description String?
+  quantity    Int
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  winners     DrawWinner[]
+}
+
+model Entry {
+  id          String   @id @default(cuid())
+  campaignId  String
+  name        String
+  email       String
+  reference   String?
+  ticketCode  String
+  isEligible  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  wins        DrawWinner[]
+
+  @@unique([campaignId, email])
+  @@unique([campaignId, reference])
+  @@unique([campaignId, ticketCode])
+}
+
+model Draw {
+  id               String       @id @default(cuid())
+  campaignId       String
+  seed             String
+  seedHash         String
+  algorithmVersion String
+  status           String       @default("COMPLETED")
+  createdAt        DateTime     @default(now())
+  campaign         Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  winners          DrawWinner[]
+}
+
+model DrawWinner {
+  id        String   @id @default(cuid())
+  drawId    String
+  entryId   String
+  prizeId   String
+  rank      Int
+  createdAt DateTime @default(now())
+  draw      Draw     @relation(fields: [drawId], references: [id], onDelete: Cascade)
+  entry     Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  prize     Prize    @relation(fields: [prizeId], references: [id], onDelete: Cascade)
+
+  @@unique([drawId, entryId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String
+  metadata   String?
+  createdAt  DateTime @default(now())
+}
