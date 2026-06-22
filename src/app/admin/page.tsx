@@ -31,6 +31,39 @@ export default async function AdminDashboard() {
         </ButtonLink>
       </header>
 
+      <Panel className="mb-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Operations</h2>
+            <p className="mt-2 text-sm leading-6 text-ink/68">
+              Run backup, restore, and smoke-test commands on the host server. The browser dashboard does not execute production maintenance tasks.
+            </p>
+          </div>
+          <a
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+            href="https://github.com/qtrcipher/open-lottery-manager/blob/main/DEPLOYMENT.md"
+            rel="noreferrer"
+            target="_blank"
+          >
+            Deployment guide
+          </a>
+        </div>
+        <dl className="mt-4 grid gap-3 text-sm lg:grid-cols-3">
+          <div className="rounded-md border border-line bg-paper/70 p-3">
+            <dt className="font-semibold">Backup</dt>
+            <dd className="mt-2 break-all font-mono text-xs text-ink/70">npm run backup</dd>
+          </div>
+          <div className="rounded-md border border-line bg-paper/70 p-3">
+            <dt className="font-semibold">Restore</dt>
+            <dd className="mt-2 break-all font-mono text-xs text-ink/70">npm run restore -- backups/prod-YYYYMMDD-HHMMSS.db --confirm</dd>
+          </div>
+          <div className="rounded-md border border-line bg-paper/70 p-3">
+            <dt className="font-semibold">Smoke test</dt>
+            <dd className="mt-2 break-all font-mono text-xs text-ink/70">npm run smoke:deploy -- http://localhost:3000</dd>
+          </div>
+        </dl>
+      </Panel>
+
       {activeCampaigns.length === 0 ? (
         <Panel>
           <p className="text-sm text-ink/68">
