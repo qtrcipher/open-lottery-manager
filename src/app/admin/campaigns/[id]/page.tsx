@@ -13,7 +13,7 @@ import {
   updateCampaignAction
 } from "@/app/admin/actions";
 import { Label, PageShell, Panel, StatusBadge, SubmitButton, TextArea, TextInput } from "@/components/ui";
-import { canDeleteCampaign } from "@/lib/campaign-lifecycle";
+import { canDeleteCampaign, canEditCampaignSetup } from "@/lib/campaign-lifecycle";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 
@@ -67,6 +67,7 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
   const draw = campaign.draws[0];
   const exportBase = `/admin/campaigns/${campaign.id}/exports`;
   const isArchived = campaign.status === "ARCHIVED";
+  const canEditSetup = canEditCampaignSetup(campaign.status, campaign._count.draws);
   const canDelete = canDeleteCampaign(campaign.status, campaign._count.draws);
 
   return (
@@ -86,7 +87,7 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
             </Link>
             {draw ? (
               <Link className="text-moss" href={`/campaigns/${campaign.slug}/verify`}>
-                Verify draw
+                Draw record
               </Link>
             ) : null}
           </div>
@@ -96,9 +97,13 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
       <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <Panel>
           <h2 className="text-xl font-semibold">Campaign settings</h2>
-          {isArchived ? (
+          {!canEditSetup ? (
             <div className="mt-5 space-y-4 text-sm leading-6 text-ink/70">
-              <p>This campaign is archived. Restore it before changing settings, entries, prizes, or draw state.</p>
+              <p>
+                {isArchived
+                  ? "This campaign is archived. Restore it before changing eligible setup details."
+                  : "This campaign has a completed draw. Campaign setup, entries, and prizes are locked to preserve the draw record."}
+              </p>
               <div>
                 <h3 className="font-semibold text-ink">Description</h3>
                 <p className="whitespace-pre-wrap">{campaign.description}</p>
@@ -200,7 +205,7 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
             </div>
           </Panel>
 
-          {!isArchived ? (
+          {canEditSetup ? (
             <Panel>
               <h2 className="text-xl font-semibold">Add prize</h2>
               <form action={addPrizeAction} className="mt-4 space-y-4">
@@ -270,7 +275,7 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
         </Panel>
       </section>
 
-      {!isArchived ? (
+      {canEditSetup ? (
         <section className="mt-5 grid gap-5 lg:grid-cols-2">
           <Panel>
             <h2 className="text-xl font-semibold">Add entry</h2>
@@ -304,7 +309,16 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
             </form>
           </Panel>
         </section>
-      ) : null}
+      ) : (
+        !isArchived ? (
+          <Panel className="mt-5">
+            <h2 className="text-xl font-semibold">Setup locked</h2>
+            <p className="mt-3 text-sm leading-6 text-ink/70">
+              A completed draw exists for this campaign, so entries, prizes, imports, and campaign setup can no longer be changed.
+            </p>
+          </Panel>
+        ) : null
+      )}
 
       {draw ? (
         <Panel className="mt-5">

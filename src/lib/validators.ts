@@ -5,6 +5,43 @@ function emptyToNull(value: unknown) {
   return trimmed === "" ? null : trimmed;
 }
 
+function channelToLinear(value: number): number {
+  const normalized = value / 255;
+  return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+}
+
+function hexToRgb(value: string): { red: number; green: number; blue: number } | null {
+  const match = /^#([0-9a-fA-F]{6})$/.exec(value.trim());
+  if (!match) {
+    return null;
+  }
+
+  const hex = match[1];
+  return {
+    red: Number.parseInt(hex.slice(0, 2), 16),
+    green: Number.parseInt(hex.slice(2, 4), 16),
+    blue: Number.parseInt(hex.slice(4, 6), 16)
+  };
+}
+
+function relativeLuminance(value: string): number | null {
+  const rgb = hexToRgb(value);
+  if (!rgb) {
+    return null;
+  }
+
+  return 0.2126 * channelToLinear(rgb.red) + 0.7152 * channelToLinear(rgb.green) + 0.0722 * channelToLinear(rgb.blue);
+}
+
+export function isReadableBrandColor(value: string): boolean {
+  const luminance = relativeLuminance(value);
+  if (luminance === null) {
+    return false;
+  }
+
+  return 1.05 / (luminance + 0.05) >= 4.5;
+}
+
 export const campaignSchema = z.object({
   title: z.string().min(3).max(120),
   description: z.string().min(1).max(1000),
@@ -40,5 +77,9 @@ export const appSettingsSchema = z.object({
       .refine((value) => value.startsWith("http://") || value.startsWith("https://"), "Logo URL must start with http:// or https://.")
       .nullable()
   ),
-  brandColor: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Use a 6-digit hex color like #3f6f5f.")
+  brandColor: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Use a 6-digit hex color like #3f6f5f.")
+    .refine(isReadableBrandColor, "Choose a darker brand color with readable contrast against white text.")
 });

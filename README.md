@@ -99,11 +99,11 @@ Archive old campaigns to remove them from public and active admin lists while pr
 
 Delete is only available for draft campaigns with no completed draw. The admin must type the campaign title exactly before deletion.
 
-## Draw Verification
+## Draw Record
 
-Completed public campaigns include a verification page at `/campaigns/[slug]/verify`. It shows the recorded seed hash, algorithm version, draw timestamp, entry counts, winner count, and ordered winners for participant inspection.
+Completed public campaigns include a draw record page at `/campaigns/[slug]/verify`. It shows the recorded seed hash, algorithm version, draw timestamp, entry counts, winner count, and ordered winners for participant inspection.
 
-The verification page does not expose the raw draw seed and does not replace legal, regulatory, or independent audit requirements.
+The draw record page is not an independent recomputation of the draw. It does not expose the raw draw seed and does not replace legal, regulatory, or independent audit requirements.
 
 ## Branding Settings
 

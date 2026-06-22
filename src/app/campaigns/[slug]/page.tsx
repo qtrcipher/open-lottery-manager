@@ -131,7 +131,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
                 ))}
               </ol>
               <ButtonLink href={`/campaigns/${campaign.slug}/verify`} className="brand-bg">
-                Verify draw
+                View draw record
               </ButtonLink>
             </div>
           )}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canDeleteCampaign,
+  canEditCampaignSetup,
   canModifyCampaign,
   createArchiveMetadata,
   parseArchiveMetadata,
@@ -20,6 +21,14 @@ describe("campaign lifecycle policy", () => {
     expect(canModifyCampaign("ARCHIVED")).toBe(false);
     expect(canModifyCampaign("DRAFT")).toBe(true);
     expect(canModifyCampaign("DRAWN")).toBe(true);
+  });
+
+  it("locks setup changes after archive or draw", () => {
+    expect(canEditCampaignSetup("DRAFT", 0)).toBe(true);
+    expect(canEditCampaignSetup("OPEN", 0)).toBe(true);
+    expect(canEditCampaignSetup("ARCHIVED", 0)).toBe(false);
+    expect(canEditCampaignSetup("DRAWN", 0)).toBe(false);
+    expect(canEditCampaignSetup("OPEN", 1)).toBe(false);
   });
 
   it("creates and parses archive metadata", () => {

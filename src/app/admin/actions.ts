@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { upsertAppSettings } from "@/lib/app-settings";
 import {
   canDeleteCampaign,
+  canEditCampaignSetup,
   canModifyCampaign,
   createArchiveMetadata,
   restoreCampaignState,
@@ -53,15 +54,15 @@ function asCampaignStatus(status: string): CampaignStatusValue {
 async function requireEditableCampaign(campaignId: string) {
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
-    select: { id: true, slug: true, status: true }
+    select: { id: true, slug: true, status: true, _count: { select: { draws: true } } }
   });
 
   if (!campaign) {
     throw new Error("Campaign not found.");
   }
 
-  if (!canModifyCampaign(asCampaignStatus(campaign.status))) {
-    throw new Error("Archived campaigns cannot be changed.");
+  if (!canEditCampaignSetup(asCampaignStatus(campaign.status), campaign._count.draws)) {
+    throw new Error("Campaign setup, entries, and prizes are locked after a draw or archive.");
   }
 
   return campaign;
@@ -126,9 +127,12 @@ export async function updateCampaignAction(formData: FormData) {
     isPublic: formData.get("isPublic") === "on"
   });
 
-  const existing = await prisma.campaign.findUniqueOrThrow({ where: { id: campaignId } });
-  if (!canModifyCampaign(asCampaignStatus(existing.status))) {
-    throw new Error("Archived campaigns cannot be changed.");
+  const existing = await prisma.campaign.findUniqueOrThrow({
+    where: { id: campaignId },
+    include: { _count: { select: { draws: true } } }
+  });
+  if (!canEditCampaignSetup(asCampaignStatus(existing.status), existing._count.draws)) {
+    throw new Error("Campaign setup is locked after a draw or archive.");
   }
 
   await prisma.campaign.update({
@@ -139,8 +143,8 @@ export async function updateCampaignAction(formData: FormData) {
       rules: parsed.rules,
       startsAt: optionalDate(parsed.startsAt),
       endsAt: optionalDate(parsed.endsAt),
-      isPublic: existing.status === "DRAWN" ? true : parsed.isPublic,
-      status: existing.status === "DRAWN" ? "DRAWN" : parsed.isPublic ? "OPEN" : "DRAFT"
+      isPublic: parsed.isPublic,
+      status: parsed.isPublic ? "OPEN" : "DRAFT"
     }
   });
 

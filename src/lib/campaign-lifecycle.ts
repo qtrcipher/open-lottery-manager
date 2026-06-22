@@ -15,6 +15,10 @@ export function canModifyCampaign(status: CampaignStatusValue): boolean {
   return status !== "ARCHIVED";
 }
 
+export function canEditCampaignSetup(status: CampaignStatusValue, drawCount: number): boolean {
+  return status !== "ARCHIVED" && status !== "DRAWN" && drawCount === 0;
+}
+
 export function createArchiveMetadata(status: CampaignStatusValue, isPublic: boolean): ArchiveMetadata {
   return {
     previousStatus: status,

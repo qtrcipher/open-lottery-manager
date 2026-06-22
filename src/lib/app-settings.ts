@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { appSettingsSchema } from "@/lib/validators";
+import { isReadableBrandColor } from "@/lib/validators";
 import type { z } from "zod";
 
 export const appSettingsId = "app";
@@ -30,7 +31,14 @@ export async function getAppSettings() {
       throw error;
     });
 
-  return settings ?? defaultAppSettings;
+  if (!settings) {
+    return defaultAppSettings;
+  }
+
+  return {
+    ...settings,
+    brandColor: isReadableBrandColor(settings.brandColor) ? settings.brandColor : defaultAppSettings.brandColor
+  };
 }
 
 export async function upsertAppSettings(settings: AppSettingsInput) {

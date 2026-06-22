@@ -50,7 +50,7 @@ export default async function DrawVerificationPage({ params }: { params: Promise
           <StatusBadge>{campaign.status}</StatusBadge>
           <h1 className="mt-4 text-4xl font-bold">{campaign.title}</h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-ink/72">
-            Review the recorded draw data for this campaign, including the seed hash, algorithm version, entry counts, and ordered winners.
+            Review the published draw record for this campaign, including the seed hash, algorithm version, entry counts, and ordered winners.
           </p>
         </div>
         <Link className="brand-text font-semibold" href={`/campaigns/${campaign.slug}`}>
@@ -78,7 +78,7 @@ export default async function DrawVerificationPage({ params }: { params: Promise
         </Panel>
 
         <Panel>
-          <h2 className="text-xl font-semibold">Verification summary</h2>
+          <h2 className="text-xl font-semibold">Draw summary</h2>
           <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
             <div className="rounded-md border border-line bg-paper/70 p-3">
               <dt className="text-ink/64">Total entries</dt>
@@ -118,10 +118,10 @@ export default async function DrawVerificationPage({ params }: { params: Promise
       </Panel>
 
       <Panel className="mt-5">
-        <h2 className="text-xl font-semibold">Verification note</h2>
+        <h2 className="text-xl font-semibold">Record note</h2>
         <p className="mt-3 text-sm leading-6 text-ink/70">
-          This page exposes recorded draw data for participant inspection. It does not replace licensing, regulatory review, independent auditing,
-          legal disclosures, or operator recordkeeping obligations.
+          This page exposes recorded draw data for participant inspection. It is not an independent recomputation of the draw and does not replace
+          licensing, regulatory review, independent auditing, legal disclosures, or operator recordkeeping obligations.
         </p>
       </Panel>
     </PageShell>
