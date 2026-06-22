@@ -1,0 +1,70 @@
+name: Release Tag Validation
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  verify-tag:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: file:./dev.db
+      AUTH_SECRET: ci-secret-value-with-enough-length
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD_HASH: scrypt$16384$8$1$test-salt$GGp03_CxrK_udF3Hk_SoGBXB7i1a9TccbmpPi9Fp5ZEUZUbLNqHf7fZLCibf642XtkU6D9zcRsiAWpMN-6_4qA
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Validate release metadata
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if ! printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Tag must match vMAJOR.MINOR.PATCH."
+            exit 1
+          fi
+
+          version="${tag#v}"
+          package_version="$(node -p "require('./package.json').version")"
+          if [ "$package_version" != "$version" ]; then
+            echo "package.json version $package_version does not match tag $tag."
+            exit 1
+          fi
+
+          if ! grep -q "^## v${version} -" CHANGELOG.md; then
+            echo "CHANGELOG.md is missing release notes for $tag."
+            exit 1
+          fi
+
+          if grep -q "TODO_RELEASE_NOTES" CHANGELOG.md; then
+            echo "CHANGELOG.md still contains TODO_RELEASE_NOTES."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Build Docker image
+        run: docker build .
+
+      - name: Audit dependencies
+        run: npm audit

@@ -15,7 +15,9 @@
     "db:studio": "prisma studio",
     "db:seed": "node scripts/seed-demo.mjs",
     "hash-password": "node scripts/hash-password.mjs",
-    "screenshots": "node scripts/capture-screenshots.mjs"
+    "screenshots": "node scripts/capture-screenshots.mjs",
+    "release:prepare": "node scripts/prepare-release.mjs",
+    "release:prepare:dry-run": "node scripts/prepare-release.mjs --dry-run"
   },
   "dependencies": {
     "@prisma/client": "^6.10.1",
