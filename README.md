@@ -98,6 +98,12 @@ Archive old campaigns to remove them from public and active admin lists while pr
 
 Delete is only available for draft campaigns with no completed draw. The admin must type the campaign title exactly before deletion.
 
+## Draw Verification
+
+Completed public campaigns include a verification page at `/campaigns/[slug]/verify`. It shows the recorded seed hash, algorithm version, draw timestamp, entry counts, winner count, and ordered winners for participant inspection.
+
+The verification page does not expose the raw draw seed and does not replace legal, regulatory, or independent audit requirements.
+
 ## Legal And Compliance Notice
 
 Do not use this app to operate a real-money lottery, gambling product, paid raffle, or regulated promotion unless you have confirmed that your use is lawful. This app does not provide KYC, geolocation, payment processing, tax reporting, responsible gaming controls, or regulatory certification.

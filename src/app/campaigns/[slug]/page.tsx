@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { PageShell, Panel, StatusBadge } from "@/components/ui";
+import { ButtonLink, PageShell, Panel, StatusBadge } from "@/components/ui";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -112,6 +112,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
                   </li>
                 ))}
               </ol>
+              <ButtonLink href={`/campaigns/${campaign.slug}/verify`}>Verify draw</ButtonLink>
             </div>
           )}
         </Panel>

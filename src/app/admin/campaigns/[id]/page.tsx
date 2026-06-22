@@ -80,9 +80,16 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
           </p>
         </div>
         {campaign.isPublic && !isArchived ? (
-          <Link className="font-semibold text-moss" href={`/campaigns/${campaign.slug}`}>
-            View public page
-          </Link>
+          <div className="flex flex-wrap gap-3 text-sm font-semibold">
+            <Link className="text-moss" href={`/campaigns/${campaign.slug}`}>
+              View public page
+            </Link>
+            {draw ? (
+              <Link className="text-moss" href={`/campaigns/${campaign.slug}/verify`}>
+                Verify draw
+              </Link>
+            ) : null}
+          </div>
         ) : null}
       </header>
 
