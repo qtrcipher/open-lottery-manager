@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canAcceptPublicEntries,
   canDeleteCampaign,
   canEditCampaignSetup,
   canModifyCampaign,
@@ -29,6 +30,47 @@ describe("campaign lifecycle policy", () => {
     expect(canEditCampaignSetup("ARCHIVED", 0)).toBe(false);
     expect(canEditCampaignSetup("DRAWN", 0)).toBe(false);
     expect(canEditCampaignSetup("OPEN", 1)).toBe(false);
+  });
+
+  it("only accepts public entries for open published campaigns inside the date window", () => {
+    const now = new Date("2026-06-22T12:00:00.000Z");
+
+    expect(
+      canAcceptPublicEntries({
+        status: "OPEN",
+        isPublic: true,
+        allowPublicEntries: true,
+        startsAt: new Date("2026-06-22T10:00:00.000Z"),
+        endsAt: new Date("2026-06-22T14:00:00.000Z"),
+        drawCount: 0,
+        now
+      })
+    ).toBe(true);
+
+    expect(canAcceptPublicEntries({ status: "DRAFT", isPublic: true, allowPublicEntries: true, drawCount: 0, now })).toBe(false);
+    expect(canAcceptPublicEntries({ status: "OPEN", isPublic: false, allowPublicEntries: true, drawCount: 0, now })).toBe(false);
+    expect(canAcceptPublicEntries({ status: "OPEN", isPublic: true, allowPublicEntries: false, drawCount: 0, now })).toBe(false);
+    expect(canAcceptPublicEntries({ status: "OPEN", isPublic: true, allowPublicEntries: true, drawCount: 1, now })).toBe(false);
+    expect(
+      canAcceptPublicEntries({
+        status: "OPEN",
+        isPublic: true,
+        allowPublicEntries: true,
+        startsAt: new Date("2026-06-22T13:00:00.000Z"),
+        drawCount: 0,
+        now
+      })
+    ).toBe(false);
+    expect(
+      canAcceptPublicEntries({
+        status: "OPEN",
+        isPublic: true,
+        allowPublicEntries: true,
+        endsAt: new Date("2026-06-22T11:00:00.000Z"),
+        drawCount: 0,
+        now
+      })
+    ).toBe(false);
   });
 
   it("creates and parses archive metadata", () => {

@@ -8,7 +8,7 @@ This project is software only. Operators are responsible for complying with all 
 
 - Campaign setup with public rules, dates, and status.
 - Fixed prize lists with one or more winners.
-- Manual entry creation and CSV import.
+- Public participant entry forms, manual entry creation, and CSV import.
 - Auditable draws using server-side cryptographic randomness.
 - Public results pages with seed hashes and algorithm version.
 - Operator branding settings for name, tagline, support email, logo URL, and primary color.
@@ -84,6 +84,10 @@ Omar Ali,omar@example.com,INV-1002
 ```
 
 `reference` is optional, but each email and reference must be unique within a campaign.
+
+## Public Entries
+
+Admins can enable public entries per campaign. Public entry forms appear only when a campaign is published, open, inside its configured date window, and has no completed draw. After a participant enters, the app shows a ticket code for their records.
 
 ## CSV Export
 

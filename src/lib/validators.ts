@@ -48,7 +48,8 @@ export const campaignSchema = z.object({
   rules: z.string().min(1).max(4000),
   startsAt: z.string().optional(),
   endsAt: z.string().optional(),
-  isPublic: z.boolean().default(false)
+  isPublic: z.boolean().default(false),
+  allowPublicEntries: z.boolean().default(false)
 });
 
 export const prizeSchema = z.object({
@@ -63,6 +64,8 @@ export const entrySchema = z.object({
   email: z.string().email().max(200).transform((value) => value.toLowerCase()),
   reference: z.string().max(120).optional()
 });
+
+export const publicEntrySchema = entrySchema;
 
 export const appSettingsSchema = z.object({
   operatorName: z.string().trim().min(2).max(120),

@@ -1,13 +1,69 @@
 import { notFound } from "next/navigation";
+import { createPublicEntryAction } from "@/app/campaigns/actions";
 import { OperatorBrand } from "@/components/brand";
-import { ButtonLink, PageShell, Panel, StatusBadge } from "@/components/ui";
+import { ButtonLink, Label, PageShell, Panel, StatusBadge, SubmitButton, TextInput } from "@/components/ui";
 import { getAppSettings } from "@/lib/app-settings";
+import { getPublicEntryStatus, type CampaignStatusValue, type PublicEntryStatus } from "@/lib/campaign-lifecycle";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-export default async function CampaignPage({ params }: { params: Promise<{ slug: string }> }) {
-  const resolvedParams = await params;
+function publicEntryStatusMessage(status: PublicEntryStatus): string {
+  if (status === "not_started") {
+    return "Entries are not open yet.";
+  }
+
+  if (status === "ended") {
+    return "Entries are closed.";
+  }
+
+  if (status === "drawn") {
+    return "This campaign is no longer accepting entries.";
+  }
+
+  if (status === "disabled" || status === "not_public") {
+    return "This campaign is not accepting public entries.";
+  }
+
+  if (status === "not_open") {
+    return "Entries are not open.";
+  }
+
+  return "Entries are open.";
+}
+
+function publicEntryErrorMessage(error?: string): string | null {
+  if (error === "duplicate-email") {
+    return "This email is already entered for this campaign.";
+  }
+
+  if (error === "duplicate-reference") {
+    return "This reference is already entered for this campaign.";
+  }
+
+  if (error === "invalid") {
+    return "Check the entry form and try again.";
+  }
+
+  if (error === "closed") {
+    return "Entries are not currently open for this campaign.";
+  }
+
+  if (error === "duplicate") {
+    return "This entry could not be created because it duplicates an existing record.";
+  }
+
+  return null;
+}
+
+export default async function CampaignPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ entry?: string; ticket?: string }>;
+}) {
+  const [resolvedParams, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const [settings, campaign] = await Promise.all([
     getAppSettings(),
     prisma.campaign.findFirst({
@@ -33,6 +89,15 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
   }
 
   const draw = campaign.draws[0];
+  const publicEntryStatus = getPublicEntryStatus({
+    status: campaign.status as CampaignStatusValue,
+    isPublic: campaign.isPublic,
+    allowPublicEntries: campaign.allowPublicEntries,
+    startsAt: campaign.startsAt,
+    endsAt: campaign.endsAt,
+    drawCount: campaign.draws.length
+  });
+  const entryError = publicEntryErrorMessage(resolvedSearchParams.entry);
 
   return (
     <PageShell>
@@ -78,6 +143,41 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
           </dl>
         </Panel>
       </div>
+
+      {!draw ? (
+        <Panel className="mt-6">
+          <h2 className="text-xl font-semibold">Enter campaign</h2>
+          {resolvedSearchParams.ticket ? (
+            <div className="mt-4 rounded-md border border-moss/30 bg-moss/10 p-4 text-sm">
+              <p className="font-semibold text-moss">Entry received.</p>
+              <p className="mt-2 text-ink/70">Your ticket code is:</p>
+              <p className="mt-2 break-all font-mono text-lg font-bold text-ink">{resolvedSearchParams.ticket}</p>
+            </div>
+          ) : publicEntryStatus === "open" ? (
+            <>
+              {entryError ? <p className="mt-4 rounded-md border border-brick/30 bg-brick/10 p-3 text-sm text-brick">{entryError}</p> : null}
+              <form action={createPublicEntryAction} className="mt-4 grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
+                <input name="slug" type="hidden" value={campaign.slug} />
+                <div>
+                  <Label>Name</Label>
+                  <TextInput name="name" required maxLength={120} />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <TextInput name="email" type="email" required maxLength={200} />
+                </div>
+                <div>
+                  <Label>Reference</Label>
+                  <TextInput name="reference" maxLength={120} placeholder="Optional" />
+                </div>
+                <SubmitButton>Enter</SubmitButton>
+              </form>
+            </>
+          ) : (
+            <p className="mt-4 text-sm text-ink/68">{publicEntryStatusMessage(publicEntryStatus)}</p>
+          )}
+        </Panel>
+      ) : null}
 
       <section className="mt-6 grid gap-5 lg:grid-cols-2">
         <Panel>

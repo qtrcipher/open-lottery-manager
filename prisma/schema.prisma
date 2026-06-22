@@ -24,12 +24,13 @@ model Campaign {
   status      CampaignStatus @default(DRAFT)
   startsAt    DateTime?
   endsAt      DateTime?
-  isPublic    Boolean        @default(false)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  prizes      Prize[]
-  entries     Entry[]
-  draws       Draw[]
+  isPublic           Boolean        @default(false)
+  allowPublicEntries Boolean        @default(false)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  prizes             Prize[]
+  entries            Entry[]
+  draws              Draw[]
 }
 
 model AppSettings {

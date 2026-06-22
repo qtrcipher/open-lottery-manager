@@ -39,6 +39,10 @@ export default async function NewCampaignPage() {
               <input name="isPublic" type="checkbox" className="h-4 w-4" />
               Publish campaign page
             </label>
+            <label className="flex items-center gap-3 text-sm font-semibold">
+              <input name="allowPublicEntries" type="checkbox" className="h-4 w-4" />
+              Accept public entries
+            </label>
             <SubmitButton>Create campaign</SubmitButton>
           </form>
         </Panel>

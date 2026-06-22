@@ -112,6 +112,10 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
                 <h3 className="font-semibold text-ink">Rules</h3>
                 <p className="whitespace-pre-wrap">{campaign.rules}</p>
               </div>
+              <div>
+                <h3 className="font-semibold text-ink">Public entries</h3>
+                <p>{campaign.allowPublicEntries ? "Enabled" : "Disabled"}</p>
+              </div>
             </div>
           ) : (
             <form action={updateCampaignAction} className="mt-5 space-y-5">
@@ -141,6 +145,10 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
               <label className="flex items-center gap-3 text-sm font-semibold">
                 <input name="isPublic" type="checkbox" className="h-4 w-4" defaultChecked={campaign.isPublic} disabled={campaign.status === "DRAWN"} />
                 Publish campaign page
+              </label>
+              <label className="flex items-center gap-3 text-sm font-semibold">
+                <input name="allowPublicEntries" type="checkbox" className="h-4 w-4" defaultChecked={campaign.allowPublicEntries} />
+                Accept public entries
               </label>
               <SubmitButton>Save settings</SubmitButton>
             </form>

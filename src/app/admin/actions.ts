@@ -76,7 +76,8 @@ export async function createCampaignAction(formData: FormData) {
     rules: formString(formData, "rules"),
     startsAt: formString(formData, "startsAt"),
     endsAt: formString(formData, "endsAt"),
-    isPublic: formData.get("isPublic") === "on"
+    isPublic: formData.get("isPublic") === "on",
+    allowPublicEntries: formData.get("allowPublicEntries") === "on"
   });
 
   const baseSlug = slugify(parsed.title) || `campaign-${Date.now()}`;
@@ -89,6 +90,7 @@ export async function createCampaignAction(formData: FormData) {
       startsAt: optionalDate(parsed.startsAt),
       endsAt: optionalDate(parsed.endsAt),
       isPublic: parsed.isPublic,
+      allowPublicEntries: parsed.isPublic && parsed.allowPublicEntries,
       status: parsed.isPublic ? "OPEN" : "DRAFT"
     }
   }).catch(async (error) => {
@@ -105,6 +107,7 @@ export async function createCampaignAction(formData: FormData) {
         startsAt: optionalDate(parsed.startsAt),
         endsAt: optionalDate(parsed.endsAt),
         isPublic: parsed.isPublic,
+        allowPublicEntries: parsed.isPublic && parsed.allowPublicEntries,
         status: parsed.isPublic ? "OPEN" : "DRAFT"
       }
     });
@@ -124,7 +127,8 @@ export async function updateCampaignAction(formData: FormData) {
     rules: formString(formData, "rules"),
     startsAt: formString(formData, "startsAt"),
     endsAt: formString(formData, "endsAt"),
-    isPublic: formData.get("isPublic") === "on"
+    isPublic: formData.get("isPublic") === "on",
+    allowPublicEntries: formData.get("allowPublicEntries") === "on"
   });
 
   const existing = await prisma.campaign.findUniqueOrThrow({
@@ -144,6 +148,7 @@ export async function updateCampaignAction(formData: FormData) {
       startsAt: optionalDate(parsed.startsAt),
       endsAt: optionalDate(parsed.endsAt),
       isPublic: parsed.isPublic,
+      allowPublicEntries: parsed.isPublic && parsed.allowPublicEntries,
       status: parsed.isPublic ? "OPEN" : "DRAFT"
     }
   });
