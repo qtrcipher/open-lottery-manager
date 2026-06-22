@@ -2,6 +2,24 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.9 - 2026-06-22
+
+Export filtering, backup readiness, and version visibility improvements.
+
+### Added
+
+- Global CSV export filters for campaign, campaign status, and date range.
+- Admin dashboard Backup readiness panel with host-side backup expectations and documentation link.
+- Public release version badge backed by package metadata.
+
+### Changed
+
+- Global export links now preserve selected campaign, status, and date filters.
+
+### Operations
+
+- Operators can filter admin-wide exports, confirm backup expectations, and identify the running release.
+
 ## v0.1.8 - 2026-06-22
 
 Admin operations, system status, and global export improvements.
