@@ -1,5 +1,7 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
+import { Download } from "lucide-react";
 import {
   addEntryAction,
   addPrizeAction,
@@ -18,6 +20,18 @@ function formatDateInput(date: Date | null): string {
     return "";
   }
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function ExportLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+      href={href}
+    >
+      <Download aria-hidden="true" size={16} />
+      {children}
+    </Link>
+  );
 }
 
 export default async function CampaignAdminPage({ params }: { params: Promise<{ id: string }> }) {
@@ -47,6 +61,7 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
   }
 
   const draw = campaign.draws[0];
+  const exportBase = `/admin/campaigns/${campaign.id}/exports`;
 
   return (
     <PageShell>
@@ -115,6 +130,15 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
                 <SubmitButton>Run auditable draw</SubmitButton>
               </form>
             )}
+          </Panel>
+
+          <Panel>
+            <h2 className="text-xl font-semibold">Exports</h2>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <ExportLink href={`${exportBase}/entries`}>Entries CSV</ExportLink>
+              {draw ? <ExportLink href={`${exportBase}/winners`}>Winners CSV</ExportLink> : null}
+              <ExportLink href={`${exportBase}/audit`}>Audit CSV</ExportLink>
+            </div>
           </Panel>
 
           <Panel>

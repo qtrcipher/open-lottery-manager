@@ -84,6 +84,14 @@ Omar Ali,omar@example.com,INV-1002
 
 `reference` is optional, but each email and reference must be unique within a campaign.
 
+## CSV Export
+
+Campaign admins can download CSV records from the campaign management page:
+
+- entries: all tickets and participant details.
+- winners: completed draw winners, prize names, seed hash, and algorithm version.
+- audit log: campaign, entry, prize, import, and draw activity tied to the campaign.
+
 ## Legal And Compliance Notice
 
 Do not use this app to operate a real-money lottery, gambling product, paid raffle, or regulated promotion unless you have confirmed that your use is lawful. This app does not provide KYC, geolocation, payment processing, tax reporting, responsible gaming controls, or regulatory certification.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseEntriesCsv } from "./csv";
+import { parseEntriesCsv, serializeCsv } from "./csv";
 
 describe("parseEntriesCsv", () => {
   it("parses entries with optional references", () => {
@@ -19,5 +19,42 @@ describe("parseEntriesCsv", () => {
 
   it("requires name and email headers", () => {
     expect(() => parseEntriesCsv("name,reference\nNoor,INV-1")).toThrow("CSV must include name and email headers.");
+  });
+});
+
+describe("serializeCsv", () => {
+  it("preserves header order and formats scalar values", () => {
+    const csv = serializeCsv(["ticketCode", "isEligible", "createdAt", "reference"], [
+      {
+        ticketCode: "TICKET-1",
+        isEligible: true,
+        createdAt: new Date("2026-06-22T10:00:00.000Z"),
+        reference: undefined
+      }
+    ]);
+
+    expect(csv).toBe("ticketCode,isEligible,createdAt,reference\nTICKET-1,true,2026-06-22T10:00:00.000Z,\n");
+  });
+
+  it("escapes quotes, commas, and newlines", () => {
+    const csv = serializeCsv(["name", "reference"], [
+      {
+        name: 'Noor "Winner", Fatima',
+        reference: "INV-1\nINV-2"
+      }
+    ]);
+
+    expect(csv).toBe('name,reference\n"Noor ""Winner"", Fatima","INV-1\nINV-2"\n');
+  });
+
+  it("serializes null and undefined as empty cells", () => {
+    const csv = serializeCsv(["name", "email"], [
+      {
+        name: null,
+        email: undefined
+      }
+    ]);
+
+    expect(csv).toBe("name,email\n,\n");
   });
 });

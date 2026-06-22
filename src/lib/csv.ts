@@ -4,6 +4,9 @@ export type ParsedEntry = {
   reference?: string;
 };
 
+export type CsvValue = string | number | boolean | Date | null | undefined;
+export type CsvRow = Record<string, CsvValue>;
+
 function splitCsvLine(line: string): string[] {
   const cells: string[] = [];
   let current = "";
@@ -65,4 +68,36 @@ export function parseEntriesCsv(csv: string): ParsedEntry[] {
       reference: reference || undefined
     };
   });
+}
+
+function formatCsvValue(value: CsvValue): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  return String(value);
+}
+
+function escapeCsvCell(value: CsvValue): string {
+  const formatted = formatCsvValue(value);
+  const escaped = formatted.replaceAll('"', '""');
+
+  if (/[",\r\n]/.test(escaped)) {
+    return `"${escaped}"`;
+  }
+
+  return escaped;
+}
+
+export function serializeCsv(headers: string[], rows: CsvRow[]): string {
+  const lines = [
+    headers.map((header) => escapeCsvCell(header)).join(","),
+    ...rows.map((row) => headers.map((header) => escapeCsvCell(row[header])).join(","))
+  ];
+
+  return `${lines.join("\n")}\n`;
 }
