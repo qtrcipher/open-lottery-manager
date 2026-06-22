@@ -116,6 +116,29 @@ export default async function AdminDashboard({
             <dd className="mt-2 break-all font-mono text-xs text-ink/70">npm run smoke:deploy -- http://localhost:3000</dd>
           </div>
         </dl>
+        <div className="mt-4 rounded-md border border-line bg-paper/70 p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h3 className="font-semibold">Backup readiness</h3>
+              <p className="mt-2 text-sm leading-6 text-ink/68">
+                Confirm a current SQLite backup before draws, restores, and version upgrades. Keep backup files on the host server, not in the browser.
+              </p>
+            </div>
+            <a
+              className="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+              href="https://github.com/qtrcipher/open-lottery-manager/blob/main/DEPLOYMENT.md#backup-and-restore"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Backup docs
+            </a>
+          </div>
+          <ul className="mt-3 grid gap-2 text-sm text-ink/70 lg:grid-cols-3">
+            <li className="rounded-md border border-line bg-white px-3 py-2">Run `npm run backup` on the host server.</li>
+            <li className="rounded-md border border-line bg-white px-3 py-2">Store `backups/prod-YYYYMMDD-HHMMSS.db` outside the app container.</li>
+            <li className="rounded-md border border-line bg-white px-3 py-2">Test restore steps on a copy before relying on production backups.</li>
+          </ul>
+        </div>
         <form action="/admin" className="mt-4 grid gap-3 rounded-md border border-line bg-paper/70 p-3 text-sm lg:grid-cols-5" method="get">
           <div>
             <Label>Campaign</Label>
