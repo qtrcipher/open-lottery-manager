@@ -2,6 +2,18 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.3 - 2026-06-22
+
+Docker healthcheck support.
+
+### Added
+
+- Docker Compose container healthcheck using `/api/health`.
+
+### Operations
+
+- Deployment documentation for checking container health with `docker compose ps`.
+
 ## v0.1.2 - 2026-06-22
 
 Operations and release automation improvements.
