@@ -10,7 +10,7 @@ Use a tagged release instead of deploying an arbitrary branch:
 git clone https://github.com/qtrcipher/open-lottery-manager.git
 cd open-lottery-manager
 git fetch --tags
-RELEASE=v0.1.1
+RELEASE=v0.1.3
 git checkout "$RELEASE"
 cp .env.example .env
 npm install
@@ -26,16 +26,16 @@ Edit `.env` before starting:
 Start the app:
 
 ```bash
-docker compose up --build -d
-docker compose logs -f app
+docker compose -f docker-compose.prod.yml up --build -d
+docker compose -f docker-compose.prod.yml logs -f app
 ```
 
-Open `http://localhost:3000/admin/login` or the public URL routed through your reverse proxy. The Compose service overrides `DATABASE_URL` to `file:/app/data/prod.db`, runs `npx prisma db push`, and starts Next.js on port `3000`.
+Open `http://localhost:3000/admin/login` or the public URL routed through your reverse proxy. The production Compose template overrides `DATABASE_URL` to `file:/app/data/prod.db`, runs `npx prisma db push`, and starts Next.js on port `3000`.
 
 Check container health:
 
 ```bash
-docker compose ps
+docker compose -f docker-compose.prod.yml ps
 ```
 
 The app service uses `/api/health` for its container healthcheck. A healthy container means the Next.js process is serving requests and the SQLite database check succeeds.
@@ -69,12 +69,12 @@ mkdir -p backups
 Back up the SQLite database while the app is stopped:
 
 ```bash
-docker compose stop app
+docker compose -f docker-compose.prod.yml stop app
 docker run --rm \
   -v lottery_lottery-data:/data:ro \
   -v "$PWD/backups:/backup" \
   alpine sh -c 'cp /data/prod.db "/backup/prod-$(date +%Y%m%d-%H%M%S).db"'
-docker compose up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 If your volume name differs, replace `lottery_lottery-data` with the name from `docker volume ls`.
@@ -82,12 +82,12 @@ If your volume name differs, replace `lottery_lottery-data` with the name from `
 Restore from a backup:
 
 ```bash
-docker compose stop app
+docker compose -f docker-compose.prod.yml stop app
 docker run --rm \
   -v lottery_lottery-data:/data \
   -v "$PWD/backups:/backup:ro" \
   alpine sh -c 'cp /backup/prod-YYYYMMDD-HHMMSS.db /data/prod.db'
-docker compose up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 Always test restore steps on a copy before relying on them for production.
@@ -120,17 +120,17 @@ git tag --sort=version:refname | tail
 Upgrade to a new release:
 
 ```bash
-docker compose stop app
+docker compose -f docker-compose.prod.yml stop app
 # Run the backup command above before changing versions.
-TARGET_VERSION=v0.1.2
+TARGET_VERSION=v0.1.3
 git checkout "$TARGET_VERSION"
-docker compose up --build -d
-docker compose logs -f app
+docker compose -f docker-compose.prod.yml up --build -d
+docker compose -f docker-compose.prod.yml logs -f app
 ```
 
 After upgrade, verify:
 
-- `docker compose ps` shows the app service as healthy,
+- `docker compose -f docker-compose.prod.yml ps` shows the app service as healthy,
 - `curl http://localhost:3000/api/health` returns HTTP `200`,
 - admin login works,
 - campaign lists load,
@@ -146,6 +146,6 @@ After upgrade, verify:
 - Use a strong admin password and keep `.env` private.
 - Confirm database backups and restore steps.
 - Confirm HTTPS and trusted proxy headers.
-- Confirm `docker compose ps` shows the app service as healthy.
+- Confirm `docker compose -f docker-compose.prod.yml ps` shows the app service as healthy.
 - Confirm `/api/health` returns HTTP `200`.
 - Run a test campaign and draw before using real participant data.

@@ -80,13 +80,13 @@ Update `.env` with:
 - `ADMIN_EMAIL`: the admin login email.
 - `ADMIN_PASSWORD_HASH`: the generated password hash.
 
-Then start the app:
+Then start the app with the production template:
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.prod.yml up --build
 ```
 
-Open `http://localhost:3000/admin/login`. The Compose service uses `DATABASE_URL=file:/app/data/prod.db` and persists that database in the `lottery-data` volume.
+Open `http://localhost:3000/admin/login`. The production Compose template uses `DATABASE_URL=file:/app/data/prod.db` and persists that database in the `lottery-data` volume.
 
 For production setup, backups, reverse proxy notes, and upgrades, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
