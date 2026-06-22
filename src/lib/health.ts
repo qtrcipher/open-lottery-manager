@@ -1,5 +1,5 @@
-import packageJson from "../../package.json";
 import { prisma } from "./prisma";
+import { appVersion } from "./version";
 
 export type HealthStatus = "ok" | "error";
 
@@ -50,7 +50,7 @@ export function createHealthPayload({
   now = new Date(),
   publicUrl = getConfiguredPublicUrl(),
   uptimeSeconds = process.uptime(),
-  version = packageJson.version
+  version = appVersion
 }: {
   databaseStatus: HealthStatus;
   now?: Date;
