@@ -18,7 +18,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { slugify } from "@/lib/slug";
 import { createTicketCode } from "@/lib/tickets";
-import { appSettingsSchema, campaignSchema, entrySchema, entryUpdateSchema, prizeSchema } from "@/lib/validators";
+import { appSettingsSchema, campaignSchema, entrySchema, entryUpdateSchema, prizeSchema, prizeUpdateSchema } from "@/lib/validators";
 
 function optionalDate(value?: string): Date | null {
   if (!value) {
@@ -230,7 +230,7 @@ export async function updateCampaignAction(formData: FormData) {
 export async function addPrizeAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
-  await requireEditableCampaign(campaignId);
+  const campaign = await requireEditableCampaign(campaignId);
   const parsed = prizeSchema.parse({
     name: formString(formData, "name"),
     description: formString(formData, "description"),
@@ -250,6 +250,73 @@ export async function addPrizeAction(formData: FormData) {
 
   await writeAudit("prize.create", "Prize", prize.id, { admin: admin.email, campaignId });
   revalidatePath(`/admin/campaigns/${campaignId}`);
+  revalidatePath(`/campaigns/${campaign.slug}`);
+  redirectToCampaignAdmin(campaignId, { prizeMessage: "created" });
+}
+
+export async function updatePrizeAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const campaignId = formString(formData, "campaignId");
+  const prizeId = formString(formData, "prizeId");
+  const campaign = await requireEditableCampaign(campaignId);
+  const parsed = prizeUpdateSchema.parse({
+    name: formString(formData, "name"),
+    description: formString(formData, "description"),
+    quantity: formData.get("quantity"),
+    sortOrder: formData.get("sortOrder") || 0
+  });
+
+  const existing = await prisma.prize.findFirst({
+    where: { id: prizeId, campaignId },
+    select: { id: true }
+  });
+
+  if (!existing) {
+    throw new Error("Prize not found.");
+  }
+
+  await prisma.prize.update({
+    where: { id: existing.id },
+    data: {
+      name: parsed.name,
+      description: parsed.description,
+      quantity: parsed.quantity,
+      sortOrder: parsed.sortOrder
+    }
+  });
+
+  await writeAudit("prize.update", "Prize", existing.id, { admin: admin.email, campaignId });
+  revalidatePath(`/admin/campaigns/${campaignId}`);
+  revalidatePath(`/campaigns/${campaign.slug}`);
+  redirectToCampaignAdmin(campaignId, { prizeMessage: "updated" });
+}
+
+export async function deletePrizeAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const campaignId = formString(formData, "campaignId");
+  const prizeId = formString(formData, "prizeId");
+  const campaign = await requireEditableCampaign(campaignId);
+  const existing = await prisma.prize.findFirst({
+    where: { id: prizeId, campaignId },
+    select: { id: true, name: true, description: true, quantity: true, sortOrder: true }
+  });
+
+  if (!existing) {
+    throw new Error("Prize not found.");
+  }
+
+  await prisma.prize.delete({ where: { id: existing.id } });
+  await writeAudit("prize.delete", "Prize", existing.id, {
+    admin: admin.email,
+    campaignId,
+    name: existing.name,
+    description: existing.description,
+    quantity: existing.quantity,
+    sortOrder: existing.sortOrder
+  });
+  revalidatePath(`/admin/campaigns/${campaignId}`);
+  revalidatePath(`/campaigns/${campaign.slug}`);
+  redirectToCampaignAdmin(campaignId, { prizeMessage: "deleted" });
 }
 
 export async function addEntryAction(formData: FormData) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appSettingsSchema, entryUpdateSchema, ticketLookupSchema } from "./validators";
+import { appSettingsSchema, entryUpdateSchema, prizeUpdateSchema, ticketLookupSchema } from "./validators";
 
 describe("appSettingsSchema", () => {
   it("normalizes optional empty fields to null", () => {
@@ -74,6 +74,35 @@ describe("ticketLookupSchema", () => {
 
   it("rejects invalid lookup email", () => {
     expect(ticketLookupSchema.safeParse({ email: "not-an-email", reference: "" }).success).toBe(false);
+  });
+});
+
+describe("prizeUpdateSchema", () => {
+  it("normalizes prize updates", () => {
+    const parsed = prizeUpdateSchema.parse({
+      name: "  Grand Prize  ",
+      description: "",
+      quantity: "2",
+      sortOrder: "3"
+    });
+
+    expect(parsed).toEqual({
+      name: "Grand Prize",
+      description: null,
+      quantity: 2,
+      sortOrder: 3
+    });
+  });
+
+  it("rejects invalid prize update fields", () => {
+    expect(
+      prizeUpdateSchema.safeParse({
+        name: "",
+        description: "Optional",
+        quantity: 0,
+        sortOrder: -1
+      }).success
+    ).toBe(false);
   });
 });
 

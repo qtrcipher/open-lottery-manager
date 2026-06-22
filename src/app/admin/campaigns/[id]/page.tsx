@@ -9,11 +9,13 @@ import {
   archiveCampaignAction,
   deleteCampaignAction,
   deleteEntryAction,
+  deletePrizeAction,
   importEntriesAction,
   restoreCampaignAction,
   runDrawAction,
   updateCampaignAction,
-  updateEntryAction
+  updateEntryAction,
+  updatePrizeAction
 } from "@/app/admin/actions";
 import { Label, PageShell, Panel, StatusBadge, SubmitButton, TextArea, TextInput } from "@/components/ui";
 import { canDeleteCampaign, canEditCampaignSetup } from "@/lib/campaign-lifecycle";
@@ -69,6 +71,22 @@ function entryMessageText(message?: string): string | null {
   return null;
 }
 
+function prizeMessageText(message?: string): string | null {
+  if (message === "created") {
+    return "Prize added.";
+  }
+
+  if (message === "updated") {
+    return "Prize updated.";
+  }
+
+  if (message === "deleted") {
+    return "Prize deleted.";
+  }
+
+  return null;
+}
+
 function entryStatusFilter(value?: string): "all" | "eligible" | "ineligible" {
   if (value === "eligible" || value === "ineligible") {
     return value;
@@ -91,7 +109,7 @@ export default async function CampaignAdminPage({
   searchParams
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ entrySearch?: string; entryStatus?: string; entryMessage?: string }>;
+  searchParams: Promise<{ entrySearch?: string; entryStatus?: string; entryMessage?: string; prizeMessage?: string }>;
 }) {
   await requireAdmin();
   const [resolvedParams, resolvedSearchParams] = await Promise.all([params, searchParams]);
@@ -148,6 +166,7 @@ export default async function CampaignAdminPage({
     prisma.entry.count({ where: { campaignId: campaign.id, isEligible: false } })
   ]);
   const entryMessage = entryMessageText(resolvedSearchParams.entryMessage);
+  const prizeMessage = prizeMessageText(resolvedSearchParams.prizeMessage);
 
   return (
     <PageShell>
@@ -322,22 +341,113 @@ export default async function CampaignAdminPage({
         </div>
       </div>
 
-      <section className="mt-5 grid gap-5 lg:grid-cols-[0.75fr_1.25fr]">
+      <section className="mt-5 space-y-5">
         <Panel>
-          <h2 className="text-xl font-semibold">Prizes</h2>
-          <div className="mt-4 space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Prizes</h2>
+              <p className="mt-1 text-sm text-ink/64">Manage prize quantities and draw order before the draw.</p>
+            </div>
+            {!canEditSetup ? <span className="rounded-full border border-line bg-paper px-3 py-1 text-xs font-semibold uppercase text-ink/60">Read only</span> : null}
+          </div>
+
+          {prizeMessage ? <p className="mt-4 rounded-md border border-moss/30 bg-moss/10 p-3 text-sm text-moss">{prizeMessage}</p> : null}
+
+          <div className="mt-4 overflow-x-auto">
             {campaign.prizes.length === 0 ? (
-              <p className="text-sm text-ink/68">No prizes added.</p>
+              <p className="rounded-md border border-line bg-paper/70 p-4 text-sm text-ink/68">No prizes added.</p>
             ) : (
-              campaign.prizes.map((prize) => (
-                <div key={prize.id} className="rounded-md border border-line bg-paper/70 p-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="font-semibold">{prize.name}</h3>
-                    <span className="text-sm text-ink/64">x{prize.quantity}</span>
-                  </div>
-                  {prize.description ? <p className="mt-1 text-sm text-ink/68">{prize.description}</p> : null}
-                </div>
-              ))
+              <table className="min-w-[860px] w-full border-separate border-spacing-0 text-left text-sm">
+                <thead>
+                  <tr className="text-xs uppercase text-ink/58">
+                    <th className="border-b border-line px-3 py-2 font-semibold">Prize</th>
+                    <th className="border-b border-line px-3 py-2 font-semibold">Description</th>
+                    <th className="border-b border-line px-3 py-2 font-semibold">Quantity</th>
+                    <th className="border-b border-line px-3 py-2 font-semibold">Order</th>
+                    <th className="border-b border-line px-3 py-2 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {campaign.prizes.map((prize) => {
+                    const updateFormId = `prize-update-${prize.id}`;
+
+                    return (
+                      <tr key={prize.id} className="align-top">
+                        <td className="border-b border-line px-3 py-3">
+                          {canEditSetup ? (
+                            <TextInput aria-label="Prize name" form={updateFormId} name="name" required defaultValue={prize.name} maxLength={120} />
+                          ) : (
+                            <p className="font-semibold">{prize.name}</p>
+                          )}
+                        </td>
+                        <td className="border-b border-line px-3 py-3">
+                          {canEditSetup ? (
+                            <TextInput
+                              aria-label="Prize description"
+                              form={updateFormId}
+                              name="description"
+                              defaultValue={prize.description ?? ""}
+                              maxLength={1000}
+                              placeholder="Optional"
+                            />
+                          ) : (
+                            <span className="text-ink/70">{prize.description || "None"}</span>
+                          )}
+                        </td>
+                        <td className="border-b border-line px-3 py-3">
+                          {canEditSetup ? (
+                            <TextInput
+                              aria-label="Prize quantity"
+                              form={updateFormId}
+                              name="quantity"
+                              required
+                              type="number"
+                              min="1"
+                              max="1000"
+                              defaultValue={prize.quantity}
+                            />
+                          ) : (
+                            <span className="font-semibold">x{prize.quantity}</span>
+                          )}
+                        </td>
+                        <td className="border-b border-line px-3 py-3">
+                          {canEditSetup ? (
+                            <TextInput
+                              aria-label="Prize order"
+                              form={updateFormId}
+                              name="sortOrder"
+                              type="number"
+                              min="0"
+                              max="10000"
+                              defaultValue={prize.sortOrder}
+                            />
+                          ) : (
+                            <span className="text-ink/70">{prize.sortOrder}</span>
+                          )}
+                        </td>
+                        <td className="border-b border-line px-3 py-3">
+                          {canEditSetup ? (
+                            <div className="flex flex-wrap gap-2">
+                              <form id={updateFormId} action={updatePrizeAction}>
+                                <input name="campaignId" type="hidden" value={campaign.id} />
+                                <input name="prizeId" type="hidden" value={prize.id} />
+                                <SubmitButton>Save</SubmitButton>
+                              </form>
+                              <form action={deletePrizeAction}>
+                                <input name="campaignId" type="hidden" value={campaign.id} />
+                                <input name="prizeId" type="hidden" value={prize.id} />
+                                <SubmitButton variant="danger">Delete</SubmitButton>
+                              </form>
+                            </div>
+                          ) : (
+                            <span className="text-ink/54">Locked</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
         </Panel>

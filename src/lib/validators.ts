@@ -59,6 +59,13 @@ export const prizeSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).max(10000).default(0)
 });
 
+export const prizeUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  description: z.preprocess(emptyToNull, z.string().max(1000).nullable()),
+  quantity: z.coerce.number().int().min(1).max(1000),
+  sortOrder: z.coerce.number().int().min(0).max(10000).default(0)
+});
+
 export const entrySchema = z.object({
   name: z.string().min(1).max(120),
   email: z.string().email().max(200).transform((value) => value.toLowerCase()),
