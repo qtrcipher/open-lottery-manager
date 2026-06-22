@@ -32,6 +32,14 @@ docker compose logs -f app
 
 Open `http://localhost:3000/admin/login` or the public URL routed through your reverse proxy. The Compose service overrides `DATABASE_URL` to `file:/app/data/prod.db`, runs `npx prisma db push`, and starts Next.js on port `3000`.
 
+Check container health:
+
+```bash
+docker compose ps
+```
+
+The app service uses `/api/health` for its container healthcheck. A healthy container means the Next.js process is serving requests and the SQLite database check succeeds.
+
 Check runtime health:
 
 ```bash
@@ -122,6 +130,7 @@ docker compose logs -f app
 
 After upgrade, verify:
 
+- `docker compose ps` shows the app service as healthy,
 - `curl http://localhost:3000/api/health` returns HTTP `200`,
 - admin login works,
 - campaign lists load,
@@ -137,5 +146,6 @@ After upgrade, verify:
 - Use a strong admin password and keep `.env` private.
 - Confirm database backups and restore steps.
 - Confirm HTTPS and trusted proxy headers.
+- Confirm `docker compose ps` shows the app service as healthy.
 - Confirm `/api/health` returns HTTP `200`.
 - Run a test campaign and draw before using real participant data.
