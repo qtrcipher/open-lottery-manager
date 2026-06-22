@@ -2,6 +2,23 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.2 - 2026-06-22
+
+Operations and release automation improvements.
+
+### Added
+
+- Runtime health endpoint at `/api/health` with app status, package version, timestamp, and database connectivity.
+- Release preparation script, release process documentation, and release tag validation workflow.
+
+### Changed
+
+- Release workflow now validates version metadata, changelog notes, tests, linting, build output, Docker builds, and dependency audit on pushed release tags.
+
+### Operations
+
+- Deployment guide with Docker Compose setup, SQLite backup and restore commands, reverse proxy guidance, upgrade checks, and runtime health verification.
+
 ## v0.1.1 - 2026-06-22
 
 Public release polish and operator workflow improvements after the initial `v0.1.0` release.
