@@ -2,6 +2,23 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.5 - 2026-06-22
+
+Database backup and restore helpers.
+
+### Added
+
+- Production SQLite backup helper with `npm run backup`.
+- Guarded production SQLite restore helper with `npm run restore -- backups/prod-YYYYMMDD-HHMMSS.db --confirm`.
+
+### Changed
+
+- README and deployment guide now document helper-based backup and restore commands.
+
+### Operations
+
+- Backup and restore helpers stop running app containers, operate on `/app/data/prod.db`, and restart the app when needed.
+
 ## v0.1.4 - 2026-06-22
 
 Production deployment templates and smoke checks.
