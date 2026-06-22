@@ -2,6 +2,23 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.4 - 2026-06-22
+
+Production deployment templates and smoke checks.
+
+### Added
+
+- Production Docker Compose template in `docker-compose.prod.yml`.
+- Deployment smoke test command with `npm run smoke:deploy -- http://localhost:3000`.
+
+### Changed
+
+- README and deployment guide now point production users to the production Compose template and smoke test.
+
+### Operations
+
+- Self-hosters can validate `/api/health`, app status, and database status with one command after deployment.
+
 ## v0.1.3 - 2026-06-22
 
 Docker healthcheck support.
