@@ -3,6 +3,13 @@
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  canDeleteCampaign,
+  canModifyCampaign,
+  createArchiveMetadata,
+  restoreCampaignState,
+  type CampaignStatusValue
+} from "@/lib/campaign-lifecycle";
 import { parseEntriesCsv } from "@/lib/csv";
 import { drawAlgorithmVersion, selectWinners } from "@/lib/draw";
 import { prisma } from "@/lib/prisma";
@@ -36,6 +43,27 @@ async function writeAudit(action: string, entityType: string, entityId: string, 
 
 function isUniqueError(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
+function asCampaignStatus(status: string): CampaignStatusValue {
+  return status as CampaignStatusValue;
+}
+
+async function requireEditableCampaign(campaignId: string) {
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: campaignId },
+    select: { id: true, slug: true, status: true }
+  });
+
+  if (!campaign) {
+    throw new Error("Campaign not found.");
+  }
+
+  if (!canModifyCampaign(asCampaignStatus(campaign.status))) {
+    throw new Error("Archived campaigns cannot be changed.");
+  }
+
+  return campaign;
 }
 
 export async function createCampaignAction(formData: FormData) {
@@ -98,6 +126,9 @@ export async function updateCampaignAction(formData: FormData) {
   });
 
   const existing = await prisma.campaign.findUniqueOrThrow({ where: { id: campaignId } });
+  if (!canModifyCampaign(asCampaignStatus(existing.status))) {
+    throw new Error("Archived campaigns cannot be changed.");
+  }
 
   await prisma.campaign.update({
     where: { id: campaignId },
@@ -120,6 +151,7 @@ export async function updateCampaignAction(formData: FormData) {
 export async function addPrizeAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
+  await requireEditableCampaign(campaignId);
   const parsed = prizeSchema.parse({
     name: formString(formData, "name"),
     description: formString(formData, "description"),
@@ -144,6 +176,7 @@ export async function addPrizeAction(formData: FormData) {
 export async function addEntryAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
+  await requireEditableCampaign(campaignId);
   const parsed = entrySchema.parse({
     name: formString(formData, "name"),
     email: formString(formData, "email"),
@@ -167,6 +200,7 @@ export async function addEntryAction(formData: FormData) {
 export async function importEntriesAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
+  await requireEditableCampaign(campaignId);
   const csv = String(formData.get("csv") ?? "");
   const parsedEntries = parseEntriesCsv(csv);
   const seenEmails = new Set<string>();
@@ -218,6 +252,10 @@ export async function runDrawAction(formData: FormData) {
 
   if (!campaign) {
     throw new Error("Campaign not found.");
+  }
+
+  if (!canModifyCampaign(asCampaignStatus(campaign.status))) {
+    throw new Error("Archived campaigns cannot be changed.");
   }
 
   if (campaign.draws.length > 0) {
@@ -279,4 +317,135 @@ export async function runDrawAction(formData: FormData) {
   revalidatePath(`/campaigns/${campaign.slug}`);
   revalidatePath(`/admin/campaigns/${campaignId}`);
   redirect(`/admin/campaigns/${campaignId}?draw=${draw.id}`);
+}
+
+export async function archiveCampaignAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const campaignId = formString(formData, "campaignId");
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: campaignId },
+    select: { id: true, slug: true, status: true, isPublic: true }
+  });
+
+  if (!campaign) {
+    throw new Error("Campaign not found.");
+  }
+
+  if (campaign.status === "ARCHIVED") {
+    redirect(`/admin/campaigns/${campaign.id}`);
+  }
+
+  const archiveMetadata = createArchiveMetadata(asCampaignStatus(campaign.status), campaign.isPublic);
+
+  await prisma.campaign.update({
+    where: { id: campaign.id },
+    data: { status: "ARCHIVED", isPublic: false }
+  });
+
+  await writeAudit("campaign.archive", "Campaign", campaign.id, {
+    admin: admin.email,
+    ...archiveMetadata
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath(`/campaigns/${campaign.slug}`);
+  revalidatePath(`/admin/campaigns/${campaign.id}`);
+  redirect(`/admin/campaigns/${campaign.id}`);
+}
+
+export async function restoreCampaignAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const campaignId = formString(formData, "campaignId");
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: campaignId },
+    select: {
+      id: true,
+      slug: true,
+      status: true,
+      _count: { select: { draws: true } }
+    }
+  });
+
+  if (!campaign) {
+    throw new Error("Campaign not found.");
+  }
+
+  if (campaign.status !== "ARCHIVED") {
+    redirect(`/admin/campaigns/${campaign.id}`);
+  }
+
+  const archiveLog = await prisma.auditLog.findFirst({
+    where: {
+      action: "campaign.archive",
+      entityType: "Campaign",
+      entityId: campaign.id
+    },
+    orderBy: { createdAt: "desc" },
+    select: { metadata: true }
+  });
+  const restored = restoreCampaignState(campaign._count.draws, archiveLog?.metadata);
+
+  await prisma.campaign.update({
+    where: { id: campaign.id },
+    data: {
+      status: restored.previousStatus,
+      isPublic: restored.previousIsPublic
+    }
+  });
+
+  await writeAudit("campaign.restore", "Campaign", campaign.id, {
+    admin: admin.email,
+    restoredStatus: restored.previousStatus,
+    restoredIsPublic: restored.previousIsPublic
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath(`/campaigns/${campaign.slug}`);
+  revalidatePath(`/admin/campaigns/${campaign.id}`);
+  redirect(`/admin/campaigns/${campaign.id}`);
+}
+
+export async function deleteCampaignAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const campaignId = formString(formData, "campaignId");
+  const confirmation = formString(formData, "confirmation");
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: campaignId },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      status: true,
+      _count: { select: { draws: true, entries: true, prizes: true } }
+    }
+  });
+
+  if (!campaign) {
+    throw new Error("Campaign not found.");
+  }
+
+  if (!canDeleteCampaign(asCampaignStatus(campaign.status), campaign._count.draws)) {
+    throw new Error("Only draft campaigns without draws can be deleted.");
+  }
+
+  if (confirmation !== campaign.title) {
+    throw new Error("Type the campaign title exactly to delete it.");
+  }
+
+  await writeAudit("campaign.delete", "Campaign", campaign.id, {
+    admin: admin.email,
+    title: campaign.title,
+    slug: campaign.slug,
+    entries: campaign._count.entries,
+    prizes: campaign._count.prizes
+  });
+
+  await prisma.campaign.delete({ where: { id: campaign.id } });
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath(`/campaigns/${campaign.slug}`);
+  redirect("/admin");
 }

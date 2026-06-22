@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function CampaignPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
   const campaign = await prisma.campaign.findFirst({
-    where: { slug: resolvedParams.slug, isPublic: true },
+    where: { slug: resolvedParams.slug, isPublic: true, status: { not: "ARCHIVED" } },
     include: {
       prizes: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
       draws: {

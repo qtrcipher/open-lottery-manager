@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const campaigns = await prisma.campaign.findMany({
-    where: { isPublic: true },
+    where: { isPublic: true, status: { not: "ARCHIVED" } },
     orderBy: { createdAt: "desc" },
     include: {
       _count: {

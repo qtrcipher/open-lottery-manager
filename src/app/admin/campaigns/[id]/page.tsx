@@ -5,11 +5,15 @@ import { Download } from "lucide-react";
 import {
   addEntryAction,
   addPrizeAction,
+  archiveCampaignAction,
+  deleteCampaignAction,
   importEntriesAction,
+  restoreCampaignAction,
   runDrawAction,
   updateCampaignAction
 } from "@/app/admin/actions";
 import { Label, PageShell, Panel, StatusBadge, SubmitButton, TextArea, TextInput } from "@/components/ui";
+import { canDeleteCampaign } from "@/lib/campaign-lifecycle";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 
@@ -52,7 +56,7 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
           }
         }
       },
-      _count: { select: { entries: true } }
+      _count: { select: { entries: true, draws: true } }
     }
   });
 
@@ -62,6 +66,8 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
 
   const draw = campaign.draws[0];
   const exportBase = `/admin/campaigns/${campaign.id}/exports`;
+  const isArchived = campaign.status === "ARCHIVED";
+  const canDelete = canDeleteCampaign(campaign.status, campaign._count.draws);
 
   return (
     <PageShell>
@@ -73,7 +79,7 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
             {campaign._count.entries} entries · {campaign.prizes.length} prizes
           </p>
         </div>
-        {campaign.isPublic ? (
+        {campaign.isPublic && !isArchived ? (
           <Link className="font-semibold text-moss" href={`/campaigns/${campaign.slug}`}>
             View public page
           </Link>
@@ -83,42 +89,88 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
       <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <Panel>
           <h2 className="text-xl font-semibold">Campaign settings</h2>
-          <form action={updateCampaignAction} className="mt-5 space-y-5">
-            <input name="campaignId" type="hidden" value={campaign.id} />
-            <div>
-              <Label>Title</Label>
-              <TextInput name="title" required defaultValue={campaign.title} />
-            </div>
-            <div>
-              <Label>Description</Label>
-              <TextArea name="description" required defaultValue={campaign.description} />
-            </div>
-            <div>
-              <Label>Rules</Label>
-              <TextArea name="rules" required defaultValue={campaign.rules} />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+          {isArchived ? (
+            <div className="mt-5 space-y-4 text-sm leading-6 text-ink/70">
+              <p>This campaign is archived. Restore it before changing settings, entries, prizes, or draw state.</p>
               <div>
-                <Label>Starts at</Label>
-                <TextInput name="startsAt" type="datetime-local" defaultValue={formatDateInput(campaign.startsAt)} />
+                <h3 className="font-semibold text-ink">Description</h3>
+                <p className="whitespace-pre-wrap">{campaign.description}</p>
               </div>
               <div>
-                <Label>Ends at</Label>
-                <TextInput name="endsAt" type="datetime-local" defaultValue={formatDateInput(campaign.endsAt)} />
+                <h3 className="font-semibold text-ink">Rules</h3>
+                <p className="whitespace-pre-wrap">{campaign.rules}</p>
               </div>
             </div>
-            <label className="flex items-center gap-3 text-sm font-semibold">
-              <input name="isPublic" type="checkbox" className="h-4 w-4" defaultChecked={campaign.isPublic} disabled={campaign.status === "DRAWN"} />
-              Publish campaign page
-            </label>
-            <SubmitButton>Save settings</SubmitButton>
-          </form>
+          ) : (
+            <form action={updateCampaignAction} className="mt-5 space-y-5">
+              <input name="campaignId" type="hidden" value={campaign.id} />
+              <div>
+                <Label>Title</Label>
+                <TextInput name="title" required defaultValue={campaign.title} />
+              </div>
+              <div>
+                <Label>Description</Label>
+                <TextArea name="description" required defaultValue={campaign.description} />
+              </div>
+              <div>
+                <Label>Rules</Label>
+                <TextArea name="rules" required defaultValue={campaign.rules} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>Starts at</Label>
+                  <TextInput name="startsAt" type="datetime-local" defaultValue={formatDateInput(campaign.startsAt)} />
+                </div>
+                <div>
+                  <Label>Ends at</Label>
+                  <TextInput name="endsAt" type="datetime-local" defaultValue={formatDateInput(campaign.endsAt)} />
+                </div>
+              </div>
+              <label className="flex items-center gap-3 text-sm font-semibold">
+                <input name="isPublic" type="checkbox" className="h-4 w-4" defaultChecked={campaign.isPublic} disabled={campaign.status === "DRAWN"} />
+                Publish campaign page
+              </label>
+              <SubmitButton>Save settings</SubmitButton>
+            </form>
+          )}
         </Panel>
 
         <div className="space-y-5">
           <Panel>
+            <h2 className="text-xl font-semibold">Campaign lifecycle</h2>
+            <div className="mt-4 space-y-4">
+              {isArchived ? (
+                <form action={restoreCampaignAction}>
+                  <input name="campaignId" type="hidden" value={campaign.id} />
+                  <SubmitButton>Restore campaign</SubmitButton>
+                </form>
+              ) : (
+                <form action={archiveCampaignAction}>
+                  <input name="campaignId" type="hidden" value={campaign.id} />
+                  <p className="mb-4 text-sm leading-6 text-ink/68">Archive hides this campaign from public and active admin lists while preserving records and exports.</p>
+                  <SubmitButton>Archive campaign</SubmitButton>
+                </form>
+              )}
+
+              {canDelete ? (
+                <form action={deleteCampaignAction} className="border-t border-line pt-4">
+                  <input name="campaignId" type="hidden" value={campaign.id} />
+                  <p className="mb-3 text-sm leading-6 text-ink/68">Delete is only available for draft campaigns without draws. Type the title exactly to confirm.</p>
+                  <Label>Type {campaign.title}</Label>
+                  <TextInput name="confirmation" required />
+                  <div className="mt-3">
+                    <SubmitButton variant="danger">Delete campaign</SubmitButton>
+                  </div>
+                </form>
+              ) : null}
+            </div>
+          </Panel>
+
+          <Panel>
             <h2 className="text-xl font-semibold">Run draw</h2>
-            {draw ? (
+            {isArchived ? (
+              <p className="mt-4 text-sm leading-6 text-ink/68">Restore this campaign before running a draw.</p>
+            ) : draw ? (
               <div className="mt-4 space-y-3 text-sm">
                 <p className="font-semibold text-moss">Draw completed at {draw.createdAt.toLocaleString()}.</p>
                 <p className="break-all font-mono text-xs text-ink/66">Seed hash: {draw.seedHash}</p>
@@ -141,31 +193,33 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
             </div>
           </Panel>
 
-          <Panel>
-            <h2 className="text-xl font-semibold">Add prize</h2>
-            <form action={addPrizeAction} className="mt-4 space-y-4">
-              <input name="campaignId" type="hidden" value={campaign.id} />
-              <div>
-                <Label>Name</Label>
-                <TextInput name="name" required placeholder="Grand prize" />
-              </div>
-              <div>
-                <Label>Description</Label>
-                <TextInput name="description" placeholder="Optional prize details" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+          {!isArchived ? (
+            <Panel>
+              <h2 className="text-xl font-semibold">Add prize</h2>
+              <form action={addPrizeAction} className="mt-4 space-y-4">
+                <input name="campaignId" type="hidden" value={campaign.id} />
                 <div>
-                  <Label>Quantity</Label>
-                  <TextInput name="quantity" required type="number" min="1" defaultValue="1" />
+                  <Label>Name</Label>
+                  <TextInput name="name" required placeholder="Grand prize" />
                 </div>
                 <div>
-                  <Label>Order</Label>
-                  <TextInput name="sortOrder" type="number" min="0" defaultValue="0" />
+                  <Label>Description</Label>
+                  <TextInput name="description" placeholder="Optional prize details" />
                 </div>
-              </div>
-              <SubmitButton>Add prize</SubmitButton>
-            </form>
-          </Panel>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Quantity</Label>
+                    <TextInput name="quantity" required type="number" min="1" defaultValue="1" />
+                  </div>
+                  <div>
+                    <Label>Order</Label>
+                    <TextInput name="sortOrder" type="number" min="0" defaultValue="0" />
+                  </div>
+                </div>
+                <SubmitButton>Add prize</SubmitButton>
+              </form>
+            </Panel>
+          ) : null}
         </div>
       </div>
 
@@ -209,39 +263,41 @@ export default async function CampaignAdminPage({ params }: { params: Promise<{ 
         </Panel>
       </section>
 
-      <section className="mt-5 grid gap-5 lg:grid-cols-2">
-        <Panel>
-          <h2 className="text-xl font-semibold">Add entry</h2>
-          <form action={addEntryAction} className="mt-4 space-y-4">
-            <input name="campaignId" type="hidden" value={campaign.id} />
-            <div>
-              <Label>Name</Label>
-              <TextInput name="name" required />
-            </div>
-            <div>
-              <Label>Email</Label>
-              <TextInput name="email" type="email" required />
-            </div>
-            <div>
-              <Label>Reference</Label>
-              <TextInput name="reference" placeholder="Optional order or customer reference" />
-            </div>
-            <SubmitButton>Add entry</SubmitButton>
-          </form>
-        </Panel>
+      {!isArchived ? (
+        <section className="mt-5 grid gap-5 lg:grid-cols-2">
+          <Panel>
+            <h2 className="text-xl font-semibold">Add entry</h2>
+            <form action={addEntryAction} className="mt-4 space-y-4">
+              <input name="campaignId" type="hidden" value={campaign.id} />
+              <div>
+                <Label>Name</Label>
+                <TextInput name="name" required />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <TextInput name="email" type="email" required />
+              </div>
+              <div>
+                <Label>Reference</Label>
+                <TextInput name="reference" placeholder="Optional order or customer reference" />
+              </div>
+              <SubmitButton>Add entry</SubmitButton>
+            </form>
+          </Panel>
 
-        <Panel>
-          <h2 className="text-xl font-semibold">CSV import</h2>
-          <form action={importEntriesAction} className="mt-4 space-y-4">
-            <input name="campaignId" type="hidden" value={campaign.id} />
-            <div>
-              <Label>CSV rows</Label>
-              <TextArea name="csv" required placeholder={"name,email,reference\nFatima Noor,fatima@example.com,INV-1001"} />
-            </div>
-            <SubmitButton>Import entries</SubmitButton>
-          </form>
-        </Panel>
-      </section>
+          <Panel>
+            <h2 className="text-xl font-semibold">CSV import</h2>
+            <form action={importEntriesAction} className="mt-4 space-y-4">
+              <input name="campaignId" type="hidden" value={campaign.id} />
+              <div>
+                <Label>CSV rows</Label>
+                <TextArea name="csv" required placeholder={"name,email,reference\nFatima Noor,fatima@example.com,INV-1001"} />
+              </div>
+              <SubmitButton>Import entries</SubmitButton>
+            </form>
+          </Panel>
+        </section>
+      ) : null}
 
       {draw ? (
         <Panel className="mt-5">

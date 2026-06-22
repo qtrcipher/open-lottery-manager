@@ -92,6 +92,12 @@ Campaign admins can download CSV records from the campaign management page:
 - winners: completed draw winners, prize names, seed hash, and algorithm version.
 - audit log: campaign, entry, prize, import, and draw activity tied to the campaign.
 
+## Campaign Lifecycle
+
+Archive old campaigns to remove them from public and active admin lists while preserving entries, winners, exports, and audit history. Archived campaigns can be restored from the admin dashboard or campaign management page.
+
+Delete is only available for draft campaigns with no completed draw. The admin must type the campaign title exactly before deletion.
+
 ## Legal And Compliance Notice
 
 Do not use this app to operate a real-money lottery, gambling product, paid raffle, or regulated promotion unless you have confirmed that your use is lawful. This app does not provide KYC, geolocation, payment processing, tax reporting, responsible gaming controls, or regulatory certification.
