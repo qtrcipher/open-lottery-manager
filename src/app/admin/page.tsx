@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Download, PlusCircle } from "lucide-react";
 import { restoreCampaignAction } from "@/app/admin/actions";
-import { ButtonLink, PageShell, Panel, StatusBadge, SubmitButton } from "@/components/ui";
+import { ButtonLink, Label, PageShell, Panel, StatusBadge, SubmitButton, TextInput } from "@/components/ui";
+import { campaignStatusOptions, globalExportHref, parseGlobalExportFilters } from "@/lib/export-filters";
 import { checkDatabaseHealth, createHealthPayload } from "@/lib/health";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
@@ -21,8 +22,14 @@ function ExportLink({ href, children }: { href: string; children: ReactNode }) {
   );
 }
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({
+  searchParams
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireAdmin();
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const exportFilters = parseGlobalExportFilters(resolvedSearchParams);
 
   const [campaigns, databaseStatus] = await Promise.all([
     prisma.campaign.findMany({
@@ -109,10 +116,57 @@ export default async function AdminDashboard() {
             <dd className="mt-2 break-all font-mono text-xs text-ink/70">npm run smoke:deploy -- http://localhost:3000</dd>
           </div>
         </dl>
+        <form action="/admin" className="mt-4 grid gap-3 rounded-md border border-line bg-paper/70 p-3 text-sm lg:grid-cols-5" method="get">
+          <div>
+            <Label>Campaign</Label>
+            <select
+              className="min-h-11 w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm"
+              defaultValue={exportFilters.campaignId}
+              name="campaignId"
+            >
+              <option value="">All campaigns</option>
+              {campaigns.map((campaign) => (
+                <option key={campaign.id} value={campaign.id}>
+                  {campaign.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label>Status</Label>
+            <select className="min-h-11 w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm" defaultValue={exportFilters.status} name="status">
+              <option value="">All statuses</option>
+              {campaignStatusOptions.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label>From</Label>
+            <TextInput defaultValue={exportFilters.fromInput} name="from" type="datetime-local" />
+          </div>
+          <div>
+            <Label>To</Label>
+            <TextInput defaultValue={exportFilters.toInput} name="to" type="datetime-local" />
+          </div>
+          <div className="flex items-end gap-2">
+            <button className="inline-flex min-h-11 flex-1 items-center justify-center rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-moss" type="submit">
+              Apply
+            </button>
+            <Link
+              className="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+              href="/admin"
+            >
+              Reset
+            </Link>
+          </div>
+        </form>
         <div className="mt-4 flex flex-wrap gap-3">
-          <ExportLink href="/admin/exports/entries">All entries CSV</ExportLink>
-          <ExportLink href="/admin/exports/winners">All winners CSV</ExportLink>
-          <ExportLink href="/admin/exports/audit">All audit CSV</ExportLink>
+          <ExportLink href={globalExportHref("entries", exportFilters)}>All entries CSV</ExportLink>
+          <ExportLink href={globalExportHref("winners", exportFilters)}>All winners CSV</ExportLink>
+          <ExportLink href={globalExportHref("audit", exportFilters)}>All audit CSV</ExportLink>
         </div>
       </Panel>
 

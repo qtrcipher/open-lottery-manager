@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { campaignIdForAuditLog, globalAuditRows, globalEntryRows, globalWinnerRows } from "./export-rows";
+import { campaignIdForAuditLog, filterAuditLogsByCampaignContext, globalAuditRows, globalEntryRows, globalWinnerRows } from "./export-rows";
 
 const campaign = {
   id: "campaign_1",
@@ -146,5 +146,26 @@ describe("globalAuditRows", () => {
   it("returns a campaign id only when it matches a known campaign", () => {
     expect(campaignIdForAuditLog({ action: "x", entityType: "Campaign", entityId: "campaign_1", metadata: null, createdAt: new Date() }, new Set(["campaign_1"]))).toBe("campaign_1");
     expect(campaignIdForAuditLog({ action: "x", entityType: "Campaign", entityId: "missing", metadata: null, createdAt: new Date() }, new Set(["campaign_1"]))).toBeNull();
+  });
+
+  it("filters audit logs to known campaign contexts", () => {
+    const logs = [
+      {
+        action: "campaign.create",
+        entityType: "Campaign",
+        entityId: "campaign_1",
+        metadata: null,
+        createdAt: new Date("2026-06-22T09:00:00.000Z")
+      },
+      {
+        action: "settings.update",
+        entityType: "AppSettings",
+        entityId: "app",
+        metadata: null,
+        createdAt: new Date("2026-06-22T10:00:00.000Z")
+      }
+    ];
+
+    expect(filterAuditLogsByCampaignContext(logs, [campaign])).toEqual([logs[0]]);
   });
 });

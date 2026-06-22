@@ -150,3 +150,12 @@ export function globalAuditRows(logs: GlobalAuditExportSource[], campaigns: Camp
     };
   });
 }
+
+export function filterAuditLogsByCampaignContext(logs: GlobalAuditExportSource[], campaigns: CampaignExportContext[]): GlobalAuditExportSource[] {
+  const campaignIds = new Set(campaigns.map((campaign) => campaign.id));
+
+  return logs.filter((log) => {
+    const campaignId = campaignIdForAuditLog(log, campaignIds);
+    return Boolean(campaignId);
+  });
+}
