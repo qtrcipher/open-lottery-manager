@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appSettingsSchema } from "./validators";
+import { appSettingsSchema, ticketLookupSchema } from "./validators";
 
 describe("appSettingsSchema", () => {
   it("normalizes optional empty fields to null", () => {
@@ -56,5 +56,23 @@ describe("appSettingsSchema", () => {
         brandColor: "#ffffff"
       }).success
     ).toBe(false);
+  });
+});
+
+describe("ticketLookupSchema", () => {
+  it("normalizes lookup email and accepts an empty reference", () => {
+    const parsed = ticketLookupSchema.parse({
+      email: " USER@example.COM ",
+      reference: ""
+    });
+
+    expect(parsed).toEqual({
+      email: "user@example.com",
+      reference: undefined
+    });
+  });
+
+  it("rejects invalid lookup email", () => {
+    expect(ticketLookupSchema.safeParse({ email: "not-an-email", reference: "" }).success).toBe(false);
   });
 });

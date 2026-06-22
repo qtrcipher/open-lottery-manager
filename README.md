@@ -89,6 +89,8 @@ Omar Ali,omar@example.com,INV-1002
 
 Admins can enable public entries per campaign. Public entry forms appear only when a campaign is published, open, inside its configured date window, and has no completed draw. After a participant enters, the app shows a ticket code for their records.
 
+Participants can revisit `/campaigns/[slug]/lookup` to find their ticket code with the email address used for entry and an optional reference.
+
 ## CSV Export
 
 Campaign admins can download CSV records from the campaign management page:

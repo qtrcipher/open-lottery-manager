@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { canAcceptPublicEntries, type CampaignStatusValue } from "@/lib/campaign-lifecycle";
 import { prisma } from "@/lib/prisma";
 import { createTicketCode } from "@/lib/tickets";
-import { publicEntrySchema } from "@/lib/validators";
+import { publicEntrySchema, ticketLookupSchema } from "@/lib/validators";
 
 function formString(formData: FormData, key: string): string {
   return String(formData.get(key) ?? "").trim();
@@ -15,6 +15,11 @@ function formString(formData: FormData, key: string): string {
 function redirectToCampaign(slug: string, params: Record<string, string>): never {
   const searchParams = new URLSearchParams(params);
   redirect(`/campaigns/${slug}?${searchParams.toString()}`);
+}
+
+function redirectToLookup(slug: string, params: Record<string, string>): never {
+  const searchParams = new URLSearchParams(params);
+  redirect(`/campaigns/${slug}/lookup?${searchParams.toString()}`);
 }
 
 function isUniqueError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
@@ -144,4 +149,44 @@ export async function createPublicEntryAction(formData: FormData) {
   revalidatePath("/");
   revalidatePath(`/campaigns/${campaign.slug}`);
   redirectToCampaign(campaign.slug, { ticket: entry.ticketCode });
+}
+
+export async function lookupTicketAction(formData: FormData) {
+  const slug = formString(formData, "slug");
+  if (!slug) {
+    redirect("/");
+  }
+
+  const parsed = ticketLookupSchema.safeParse({
+    email: formString(formData, "email"),
+    reference: formString(formData, "reference") || undefined
+  });
+
+  if (!parsed.success) {
+    redirectToLookup(slug, { status: "not-found" });
+  }
+
+  const campaign = await prisma.campaign.findFirst({
+    where: { slug, isPublic: true, status: { not: "ARCHIVED" } },
+    select: { id: true, slug: true }
+  });
+
+  if (!campaign) {
+    redirectToLookup(slug, { status: "not-found" });
+  }
+
+  const entry = await prisma.entry.findFirst({
+    where: {
+      campaignId: campaign.id,
+      email: parsed.data.email,
+      ...(parsed.data.reference ? { reference: parsed.data.reference } : {})
+    },
+    select: { ticketCode: true }
+  });
+
+  if (!entry) {
+    redirectToLookup(campaign.slug, { status: "not-found" });
+  }
+
+  redirectToLookup(campaign.slug, { status: "found", ticket: entry.ticketCode });
 }

@@ -67,6 +67,11 @@ export const entrySchema = z.object({
 
 export const publicEntrySchema = entrySchema;
 
+export const ticketLookupSchema = z.object({
+  email: z.string().trim().email().max(200).transform((value) => value.toLowerCase()),
+  reference: z.string().trim().max(120).optional().transform((value) => value || undefined)
+});
+
 export const appSettingsSchema = z.object({
   operatorName: z.string().trim().min(2).max(120),
   publicTagline: z.string().trim().min(1).max(280),

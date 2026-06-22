@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createPublicEntryAction } from "@/app/campaigns/actions";
 import { OperatorBrand } from "@/components/brand";
@@ -140,6 +141,14 @@ export default async function CampaignPage({
                 </dd>
               </div>
             ) : null}
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink/64">Ticket lookup</dt>
+              <dd className="font-semibold">
+                <Link className="brand-text" href={`/campaigns/${campaign.slug}/lookup`}>
+                  Find my ticket
+                </Link>
+              </dd>
+            </div>
           </dl>
         </Panel>
       </div>
