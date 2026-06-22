@@ -39,5 +39,8 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Build Docker image
+        run: docker build .
+
       - name: Audit dependencies
         run: npm audit

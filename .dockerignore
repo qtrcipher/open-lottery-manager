@@ -1,0 +1,16 @@
+.env
+.env*.local
+.git
+.github
+.next
+coverage
+dev.db
+dev.db-journal
+dist
+node_modules
+npm-debug.log*
+prisma/dev.db
+prisma/dev.db-journal
+*.log
+.DS_Store
+research

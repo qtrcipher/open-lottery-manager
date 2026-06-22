@@ -26,6 +26,32 @@ npm run dev
 
 Update `.env` with the generated `ADMIN_PASSWORD_HASH`, a strong `AUTH_SECRET`, and your admin email. Then visit `http://localhost:3000/admin/login`.
 
+## Run With Docker
+
+Docker Compose is the recommended self-hosting path for small deployments. It stores SQLite data in a named volume so campaign and draw records survive container restarts.
+
+```bash
+git clone https://github.com/qtrcipher/open-lottery-manager.git
+cd open-lottery-manager
+cp .env.example .env
+npm install
+npm run hash-password -- "change-me"
+```
+
+Update `.env` with:
+
+- `AUTH_SECRET`: a long random value.
+- `ADMIN_EMAIL`: the admin login email.
+- `ADMIN_PASSWORD_HASH`: the generated password hash.
+
+Then start the app:
+
+```bash
+docker compose up --build
+```
+
+Open `http://localhost:3000/admin/login`. The Compose service uses `DATABASE_URL=file:/app/data/prod.db` and persists that database in the `lottery-data` volume.
+
 ## CSV Import Format
 
 Use a header row with these columns:
