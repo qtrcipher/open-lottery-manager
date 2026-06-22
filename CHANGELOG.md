@@ -2,6 +2,24 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.8 - 2026-06-22
+
+Admin operations, system status, and global export improvements.
+
+### Added
+
+- Deployment troubleshooting guide for environment, database, Docker healthcheck, smoke-test, backup, restore, and proxy header issues.
+- Admin dashboard System status panel with app version, database status, uptime, and configured public URL.
+- Admin dashboard global CSV exports for all entries, winners, and audit records.
+
+### Changed
+
+- `/api/health` now includes uptime and configured public URL while preserving existing status and database fields.
+
+### Operations
+
+- Operators can inspect deployment status and download all entries, winners, and audit records from the admin dashboard.
+
 ## v0.1.7 - 2026-06-22
 
 Admin operations documentation panel.
