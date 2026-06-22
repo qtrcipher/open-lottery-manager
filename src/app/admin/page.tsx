@@ -1,6 +1,7 @@
 import { PlusCircle } from "lucide-react";
 import { restoreCampaignAction } from "@/app/admin/actions";
 import { ButtonLink, PageShell, Panel, StatusBadge, SubmitButton } from "@/components/ui";
+import { checkDatabaseHealth, createHealthPayload } from "@/lib/health";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 
@@ -9,12 +10,16 @@ export const dynamic = "force-dynamic";
 export default async function AdminDashboard() {
   await requireAdmin();
 
-  const campaigns = await prisma.campaign.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: { select: { entries: true, prizes: true, draws: true } }
-    }
-  });
+  const [campaigns, databaseStatus] = await Promise.all([
+    prisma.campaign.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { entries: true, prizes: true, draws: true } }
+      }
+    }),
+    checkDatabaseHealth()
+  ]);
+  const health = createHealthPayload({ databaseStatus });
   const activeCampaigns = campaigns.filter((campaign) => campaign.status !== "ARCHIVED");
   const archivedCampaigns = campaigns.filter((campaign) => campaign.status === "ARCHIVED");
 
@@ -30,6 +35,34 @@ export default async function AdminDashboard() {
           New campaign
         </ButtonLink>
       </header>
+
+      <Panel className="mb-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">System status</h2>
+            <p className="mt-2 text-sm leading-6 text-ink/68">Runtime details for this admin session and deployment.</p>
+          </div>
+          <StatusBadge>{health.status}</StatusBadge>
+        </div>
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-md border border-line bg-paper/70 p-3">
+            <dt className="font-semibold">Version</dt>
+            <dd className="mt-2 break-all font-mono text-xs text-ink/70">{health.version}</dd>
+          </div>
+          <div className="rounded-md border border-line bg-paper/70 p-3">
+            <dt className="font-semibold">Database</dt>
+            <dd className="mt-2 break-all font-mono text-xs text-ink/70">{health.database.status}</dd>
+          </div>
+          <div className="rounded-md border border-line bg-paper/70 p-3">
+            <dt className="font-semibold">Uptime</dt>
+            <dd className="mt-2 break-all font-mono text-xs text-ink/70">{health.uptime.display}</dd>
+          </div>
+          <div className="rounded-md border border-line bg-paper/70 p-3">
+            <dt className="font-semibold">Public URL</dt>
+            <dd className="mt-2 break-all font-mono text-xs text-ink/70">{health.publicUrl ?? "Not configured"}</dd>
+          </div>
+        </dl>
+      </Panel>
 
       <Panel className="mb-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

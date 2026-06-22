@@ -22,6 +22,7 @@ Edit `.env` before starting:
 - `AUTH_SECRET`: a random value with at least 24 characters.
 - `ADMIN_EMAIL`: the operator admin login email.
 - `ADMIN_PASSWORD_HASH`: the generated password hash.
+- `PUBLIC_APP_URL`: optional public HTTPS URL shown in admin system status.
 
 Start the app:
 
@@ -52,7 +53,7 @@ The smoke test calls `/api/health` and verifies HTTP `200`, app status `ok`, and
 curl http://localhost:3000/api/health
 ```
 
-The endpoint returns JSON with app status, package version, timestamp, and database connectivity. A healthy response uses HTTP `200`; a database connectivity failure uses HTTP `503`.
+The endpoint returns JSON with app status, package version, uptime, configured public URL, timestamp, and database connectivity. A healthy response uses HTTP `200`; a database connectivity failure uses HTTP `503`.
 
 ## Data Persistence
 
