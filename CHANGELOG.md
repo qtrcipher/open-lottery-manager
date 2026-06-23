@@ -2,6 +2,22 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.14 - 2026-06-23
+
+Baseline HTTP security headers.
+
+### Added
+
+- App-wide baseline browser security headers, including Content Security Policy, frame blocking, content-type sniffing protection, referrer policy, permissions policy, DNS prefetch control, and production HSTS.
+
+### Changed
+
+- Deployment guide now documents reverse proxy handling for app-emitted security headers.
+
+### Operations
+
+- Operators can preserve or intentionally replace the app security headers at the reverse proxy and retest core admin and public flows after policy changes.
+
 ## v0.1.13 - 2026-06-23
 
 Release process documentation.
