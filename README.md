@@ -88,7 +88,7 @@ docker compose -f docker-compose.prod.yml up --build
 
 Open `http://localhost:3000/admin/login`. The production Compose template uses `DATABASE_URL=file:/app/data/prod.db` and persists that database in the `lottery-data` volume.
 
-For production setup, backups, reverse proxy notes, upgrades, and troubleshooting, see [DEPLOYMENT.md](DEPLOYMENT.md).
+For production setup, backups, reverse proxy notes, upgrades, and troubleshooting, see [DEPLOYMENT.md](DEPLOYMENT.md). For campaign operating checklists, see [RUNBOOK.md](RUNBOOK.md).
 
 ## Production Self-Hosting Checklist
 
@@ -100,6 +100,7 @@ For production setup, backups, reverse proxy notes, upgrades, and troubleshootin
 - Verify runtime health with `/api/health` after deployment.
 - Confirm legal, tax, age, prize, advertising, and licensing requirements before accepting public entries.
 - Keep dependencies updated and review `SECURITY.md` before reporting vulnerabilities.
+- Review [RUNBOOK.md](RUNBOOK.md) before launch, before draws, after draws, and during backup/restore drills.
 
 ## CSV Import Format
 

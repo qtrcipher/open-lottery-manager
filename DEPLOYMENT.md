@@ -162,3 +162,5 @@ The app does not send email by default. If an operator adds SMTP or transactiona
 - Confirm `docker compose -f docker-compose.prod.yml ps` shows the app service as healthy.
 - Confirm `npm run smoke:deploy -- http://localhost:3000` passes.
 - Run a test campaign and draw before using real participant data.
+
+Use [RUNBOOK.md](RUNBOOK.md) for launch, live-campaign, pre-draw, post-draw, backup drill, and incident checklists.
