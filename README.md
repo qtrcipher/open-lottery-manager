@@ -156,6 +156,8 @@ Do not use this app to operate a real-money lottery, gambling product, paid raff
 
 This repository is public and free to use under the MIT License. It is provided as self-hosted software for operators and developers; it is not a managed service and does not include regulatory certification.
 
+For maintainer release steps, see [docs/RELEASING.md](docs/RELEASING.md).
+
 ## Scripts
 
 - `npm run dev`: start the local development server.
