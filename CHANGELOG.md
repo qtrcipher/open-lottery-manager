@@ -2,6 +2,22 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.15 - 2026-06-23
+
+Admin Operations documentation links.
+
+### Added
+
+- Admin Operations panel links for deployment docs, operator runbook, release guide, and security-header guidance.
+
+### Changed
+
+- Admin Operations panel now groups documentation links and clarifies that dashboard links do not execute maintenance tasks.
+
+### Operations
+
+- Operators can reach deployment, backup, runbook, release, and security-header references from the admin dashboard.
+
 ## v0.1.14 - 2026-06-23
 
 Baseline HTTP security headers.
