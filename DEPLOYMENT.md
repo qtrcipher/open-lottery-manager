@@ -103,6 +103,8 @@ Public entry and ticket lookup rate limits read client identity from `x-forwarde
 
 Reverse proxies and load balancers can use `/api/health` for readiness checks. The endpoint is unauthenticated and intentionally exposes only basic status, version, timestamp, and database connectivity.
 
+The app emits baseline browser security headers on every route, including Content Security Policy, frame blocking, content-type sniffing protection, referrer policy, permissions policy, and production HSTS. Preserve these headers at the reverse proxy unless you intentionally replace them with an equivalent or stricter policy. If you customize the policy, retest admin pages, public entry forms, ticket lookup, exports, and operator logo URLs.
+
 ## Upgrade Workflow
 
 Before upgrading:
