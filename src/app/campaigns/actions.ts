@@ -49,16 +49,18 @@ async function createEntryWithTicket({
   campaignId,
   name,
   email,
-  reference
+  reference,
+  tx = prisma
 }: {
   campaignId: string;
   name: string;
   email: string;
   reference?: string;
+  tx?: Prisma.TransactionClient | typeof prisma;
 }) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      return await prisma.entry.create({
+      return await tx.entry.create({
         data: {
           campaignId,
           name,
@@ -148,28 +150,78 @@ export async function createPublicEntryAction(formData: FormData) {
 
   let entry;
   try {
-    entry = await createEntryWithTicket({
-      campaignId: campaign.id,
-      name: parsed.data.name,
-      email: parsed.data.email,
-      reference: parsed.data.reference
+    entry = await prisma.$transaction(async (tx) => {
+      const locked = await tx.campaign.updateMany({
+        where: {
+          id: campaign.id,
+          status: "OPEN",
+          isPublic: true,
+          allowPublicEntries: true,
+          draws: { none: {} }
+        },
+        data: { updatedAt: new Date() }
+      });
+
+      if (locked.count !== 1) {
+        throw new Error("public-entry-closed");
+      }
+
+      const currentCampaign = await tx.campaign.findUniqueOrThrow({
+        where: { id: campaign.id },
+        select: {
+          id: true,
+          status: true,
+          isPublic: true,
+          allowPublicEntries: true,
+          startsAt: true,
+          endsAt: true,
+          _count: { select: { draws: true } }
+        }
+      });
+
+      if (
+        !canAcceptPublicEntries({
+          status: currentCampaign.status as CampaignStatusValue,
+          isPublic: currentCampaign.isPublic,
+          allowPublicEntries: currentCampaign.allowPublicEntries,
+          startsAt: currentCampaign.startsAt,
+          endsAt: currentCampaign.endsAt,
+          drawCount: currentCampaign._count.draws
+        })
+      ) {
+        throw new Error("public-entry-closed");
+      }
+
+      const entry = await createEntryWithTicket({
+        campaignId: campaign.id,
+        name: parsed.data.name,
+        email: parsed.data.email,
+        reference: parsed.data.reference,
+        tx
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: "entry.public_create",
+          entityType: "Entry",
+          entityId: entry.id,
+          metadata: JSON.stringify({ campaignId: campaign.id })
+        }
+      });
+
+      return entry;
     });
   } catch (error) {
     if (isUniqueError(error)) {
       redirectToCampaign(campaign.slug, { entry: uniqueFailureCode(error) });
     }
 
+    if (error instanceof Error && error.message === "public-entry-closed") {
+      redirectToCampaign(campaign.slug, { entry: "closed" });
+    }
+
     throw error;
   }
-
-  await prisma.auditLog.create({
-    data: {
-      action: "entry.public_create",
-      entityType: "Entry",
-      entityId: entry.id,
-      metadata: JSON.stringify({ campaignId: campaign.id })
-    }
-  });
 
   revalidatePath("/");
   revalidatePath(`/campaigns/${campaign.slug}`);

@@ -32,7 +32,7 @@ docker compose -f docker-compose.prod.yml up --build -d
 docker compose -f docker-compose.prod.yml logs -f app
 ```
 
-Open `http://localhost:3000/admin/login` or the public URL routed through your reverse proxy. The production Compose template overrides `DATABASE_URL` to `file:/app/data/prod.db`, runs `npx prisma db push`, and starts Next.js on port `3000`.
+Open `http://localhost:3000/admin/login` or the public URL routed through your reverse proxy. The production Compose template overrides `DATABASE_URL` to `file:/app/data/prod.db`, runs `npx prisma db push --accept-data-loss`, and starts Next.js on port `3000`. Back up the SQLite database before upgrades because Prisma may need to rebuild SQLite tables when constraints change.
 
 Check container health:
 

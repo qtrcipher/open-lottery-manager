@@ -36,4 +36,15 @@ describe("selectWinners", () => {
 
     expect(result.winners).toHaveLength(2);
   });
+
+  it("orders eligible entries deterministically before shuffling", () => {
+    const unorderedEntries = [
+      { id: "entry-c", isEligible: true, createdAt: new Date("2026-06-22T10:00:02.000Z") },
+      { id: "entry-a", isEligible: true, createdAt: new Date("2026-06-22T10:00:00.000Z") },
+      { id: "entry-b", isEligible: true, createdAt: new Date("2026-06-22T10:00:01.000Z") }
+    ];
+    const orderedEntries = [...unorderedEntries].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+    expect(selectWinners(unorderedEntries, prizes, "fixed-seed")).toEqual(selectWinners(orderedEntries, prizes, "fixed-seed"));
+  });
 });

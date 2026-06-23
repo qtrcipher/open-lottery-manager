@@ -84,6 +84,8 @@ model Draw {
   createdAt        DateTime     @default(now())
   campaign         Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   winners          DrawWinner[]
+
+  @@unique([campaignId])
 }
 
 model DrawWinner {

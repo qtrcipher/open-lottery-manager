@@ -65,6 +65,10 @@ function asCampaignStatus(status: string): CampaignStatusValue {
   return status as CampaignStatusValue;
 }
 
+function lockedCampaignError(): Error {
+  return new Error("Campaign setup, entries, and prizes are locked after a draw or archive.");
+}
+
 function redirectToCampaignAdmin(campaignId: string, params: Record<string, string>): never {
   const searchParams = new URLSearchParams(params);
   redirect(`/admin/campaigns/${campaignId}?${searchParams.toString()}`);
@@ -145,20 +149,42 @@ async function requireEditableCampaign(campaignId: string) {
   return campaign;
 }
 
+async function lockEditableCampaign(tx: Prisma.TransactionClient, campaignId: string) {
+  const locked = await tx.campaign.updateMany({
+    where: {
+      id: campaignId,
+      status: { notIn: ["ARCHIVED", "DRAWN"] },
+      draws: { none: {} }
+    },
+    data: { updatedAt: new Date() }
+  });
+
+  if (locked.count !== 1) {
+    throw lockedCampaignError();
+  }
+
+  return tx.campaign.findUniqueOrThrow({
+    where: { id: campaignId },
+    select: { id: true, slug: true, status: true, _count: { select: { draws: true } } }
+  });
+}
+
 async function createEntryWithTicket({
   campaignId,
   name,
   email,
-  reference
+  reference,
+  tx = prisma
 }: {
   campaignId: string;
   name: string;
   email: string;
   reference?: string;
+  tx?: Prisma.TransactionClient | typeof prisma;
 }) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      return await prisma.entry.create({
+      return await tx.entry.create({
         data: {
           campaignId,
           name,
@@ -246,30 +272,33 @@ export async function updateCampaignAction(formData: FormData) {
     requireLookupReference: formData.get("requireLookupReference") === "on"
   });
 
-  const existing = await prisma.campaign.findUniqueOrThrow({
-    where: { id: campaignId },
-    include: { _count: { select: { draws: true } } }
-  });
-  if (!canEditCampaignSetup(asCampaignStatus(existing.status), existing._count.draws)) {
-    throw new Error("Campaign setup is locked after a draw or archive.");
-  }
+  await prisma.$transaction(async (tx) => {
+    await lockEditableCampaign(tx, campaignId);
+    await tx.campaign.update({
+      where: { id: campaignId },
+      data: {
+        title: parsed.title,
+        description: parsed.description,
+        rules: parsed.rules,
+        startsAt: optionalDate(parsed.startsAt),
+        endsAt: optionalDate(parsed.endsAt),
+        isPublic: parsed.isPublic,
+        allowPublicEntries: parsed.isPublic && parsed.allowPublicEntries,
+        requireLookupReference: parsed.requireLookupReference,
+        status: parsed.isPublic ? "OPEN" : "DRAFT"
+      }
+    });
 
-  await prisma.campaign.update({
-    where: { id: campaignId },
-    data: {
-      title: parsed.title,
-      description: parsed.description,
-      rules: parsed.rules,
-      startsAt: optionalDate(parsed.startsAt),
-      endsAt: optionalDate(parsed.endsAt),
-      isPublic: parsed.isPublic,
-      allowPublicEntries: parsed.isPublic && parsed.allowPublicEntries,
-      requireLookupReference: parsed.requireLookupReference,
-      status: parsed.isPublic ? "OPEN" : "DRAFT"
-    }
+    await tx.auditLog.create({
+      data: {
+        action: "campaign.update",
+        entityType: "Campaign",
+        entityId: campaignId,
+        metadata: JSON.stringify({ admin: admin.email })
+      }
+    });
   });
 
-  await writeAudit("campaign.update", "Campaign", campaignId, { admin: admin.email });
   revalidatePath("/");
   revalidatePath(`/admin/campaigns/${campaignId}`);
 }
@@ -277,7 +306,6 @@ export async function updateCampaignAction(formData: FormData) {
 export async function addPrizeAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
-  const campaign = await requireEditableCampaign(campaignId);
   const parsed = prizeSchema.parse({
     name: formString(formData, "name"),
     description: formString(formData, "description"),
@@ -285,17 +313,30 @@ export async function addPrizeAction(formData: FormData) {
     sortOrder: formData.get("sortOrder") || 0
   });
 
-  const prize = await prisma.prize.create({
-    data: {
-      campaignId,
-      name: parsed.name,
-      description: parsed.description || null,
-      quantity: parsed.quantity,
-      sortOrder: parsed.sortOrder
-    }
+  const { campaign, prize } = await prisma.$transaction(async (tx) => {
+    const campaign = await lockEditableCampaign(tx, campaignId);
+    const prize = await tx.prize.create({
+      data: {
+        campaignId,
+        name: parsed.name,
+        description: parsed.description || null,
+        quantity: parsed.quantity,
+        sortOrder: parsed.sortOrder
+      }
+    });
+
+    await tx.auditLog.create({
+      data: {
+        action: "prize.create",
+        entityType: "Prize",
+        entityId: prize.id,
+        metadata: JSON.stringify({ admin: admin.email, campaignId })
+      }
+    });
+
+    return { campaign, prize };
   });
 
-  await writeAudit("prize.create", "Prize", prize.id, { admin: admin.email, campaignId });
   revalidatePath(`/admin/campaigns/${campaignId}`);
   revalidatePath(`/campaigns/${campaign.slug}`);
   redirectToCampaignAdmin(campaignId, { prizeMessage: "created" });
@@ -305,7 +346,6 @@ export async function updatePrizeAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
   const prizeId = formString(formData, "prizeId");
-  const campaign = await requireEditableCampaign(campaignId);
   const parsed = prizeUpdateSchema.parse({
     name: formString(formData, "name"),
     description: formString(formData, "description"),
@@ -313,26 +353,39 @@ export async function updatePrizeAction(formData: FormData) {
     sortOrder: formData.get("sortOrder") || 0
   });
 
-  const existing = await prisma.prize.findFirst({
-    where: { id: prizeId, campaignId },
-    select: { id: true }
-  });
+  const { campaign } = await prisma.$transaction(async (tx) => {
+    const campaign = await lockEditableCampaign(tx, campaignId);
+    const existing = await tx.prize.findFirst({
+      where: { id: prizeId, campaignId },
+      select: { id: true }
+    });
 
-  if (!existing) {
-    throw new Error("Prize not found.");
-  }
-
-  await prisma.prize.update({
-    where: { id: existing.id },
-    data: {
-      name: parsed.name,
-      description: parsed.description,
-      quantity: parsed.quantity,
-      sortOrder: parsed.sortOrder
+    if (!existing) {
+      throw new Error("Prize not found.");
     }
+
+    await tx.prize.update({
+      where: { id: existing.id },
+      data: {
+        name: parsed.name,
+        description: parsed.description,
+        quantity: parsed.quantity,
+        sortOrder: parsed.sortOrder
+      }
+    });
+
+    await tx.auditLog.create({
+      data: {
+        action: "prize.update",
+        entityType: "Prize",
+        entityId: existing.id,
+        metadata: JSON.stringify({ admin: admin.email, campaignId })
+      }
+    });
+
+    return { campaign };
   });
 
-  await writeAudit("prize.update", "Prize", existing.id, { admin: admin.email, campaignId });
   revalidatePath(`/admin/campaigns/${campaignId}`);
   revalidatePath(`/campaigns/${campaign.slug}`);
   redirectToCampaignAdmin(campaignId, { prizeMessage: "updated" });
@@ -342,24 +395,35 @@ export async function deletePrizeAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
   const prizeId = formString(formData, "prizeId");
-  const campaign = await requireEditableCampaign(campaignId);
-  const existing = await prisma.prize.findFirst({
-    where: { id: prizeId, campaignId },
-    select: { id: true, name: true, description: true, quantity: true, sortOrder: true }
-  });
+  const { campaign } = await prisma.$transaction(async (tx) => {
+    const campaign = await lockEditableCampaign(tx, campaignId);
+    const existing = await tx.prize.findFirst({
+      where: { id: prizeId, campaignId },
+      select: { id: true, name: true, description: true, quantity: true, sortOrder: true }
+    });
 
-  if (!existing) {
-    throw new Error("Prize not found.");
-  }
+    if (!existing) {
+      throw new Error("Prize not found.");
+    }
 
-  await prisma.prize.delete({ where: { id: existing.id } });
-  await writeAudit("prize.delete", "Prize", existing.id, {
-    admin: admin.email,
-    campaignId,
-    name: existing.name,
-    description: existing.description,
-    quantity: existing.quantity,
-    sortOrder: existing.sortOrder
+    await tx.prize.delete({ where: { id: existing.id } });
+    await tx.auditLog.create({
+      data: {
+        action: "prize.delete",
+        entityType: "Prize",
+        entityId: existing.id,
+        metadata: JSON.stringify({
+          admin: admin.email,
+          campaignId,
+          name: existing.name,
+          description: existing.description,
+          quantity: existing.quantity,
+          sortOrder: existing.sortOrder
+        })
+      }
+    });
+
+    return { campaign };
   });
   revalidatePath(`/admin/campaigns/${campaignId}`);
   revalidatePath(`/campaigns/${campaign.slug}`);
@@ -369,7 +433,6 @@ export async function deletePrizeAction(formData: FormData) {
 export async function addEntryAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
-  const campaign = await requireEditableCampaign(campaignId);
   const parsed = entrySchema.parse({
     name: formString(formData, "name"),
     email: formString(formData, "email"),
@@ -377,13 +440,31 @@ export async function addEntryAction(formData: FormData) {
   });
 
   let entry;
+  let campaign;
   try {
-    entry = await createEntryWithTicket({
-      campaignId,
-      name: parsed.name,
-      email: parsed.email,
-      reference: parsed.reference
+    const result = await prisma.$transaction(async (tx) => {
+      const campaign = await lockEditableCampaign(tx, campaignId);
+      const entry = await createEntryWithTicket({
+        campaignId,
+        name: parsed.name,
+        email: parsed.email,
+        reference: parsed.reference,
+        tx
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: "entry.create",
+          entityType: "Entry",
+          entityId: entry.id,
+          metadata: JSON.stringify({ admin: admin.email, campaignId })
+        }
+      });
+
+      return { campaign, entry };
     });
+    campaign = result.campaign;
+    entry = result.entry;
   } catch (error) {
     if (isUniqueError(error)) {
       redirectToCampaignAdmin(campaignId, { entryMessage: uniqueFailureCode(error) });
@@ -392,7 +473,6 @@ export async function addEntryAction(formData: FormData) {
     throw error;
   }
 
-  await writeAudit("entry.create", "Entry", entry.id, { admin: admin.email, campaignId });
   revalidatePath(`/admin/campaigns/${campaignId}`);
   revalidatePath(`/campaigns/${campaign.slug}`);
   redirectToCampaignAdmin(campaignId, { entryMessage: "created" });
@@ -402,7 +482,6 @@ export async function updateEntryAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
   const entryId = formString(formData, "entryId");
-  const campaign = await requireEditableCampaign(campaignId);
   const parsed = entryUpdateSchema.parse({
     name: formString(formData, "name"),
     email: formString(formData, "email"),
@@ -410,24 +489,43 @@ export async function updateEntryAction(formData: FormData) {
     isEligible: formData.get("isEligible") === "on"
   });
 
-  const existing = await prisma.entry.findFirst({
-    where: { id: entryId, campaignId },
-    select: { id: true, ticketCode: true }
-  });
-
-  if (!existing) {
-    throw new Error("Entry not found.");
-  }
-
+  let campaign;
   try {
-    await prisma.entry.update({
-      where: { id: existing.id },
-      data: {
-        name: parsed.name,
-        email: parsed.email,
-        reference: parsed.reference,
-        isEligible: parsed.isEligible
+    campaign = await prisma.$transaction(async (tx) => {
+      const campaign = await lockEditableCampaign(tx, campaignId);
+      const existing = await tx.entry.findFirst({
+        where: { id: entryId, campaignId },
+        select: { id: true, ticketCode: true }
+      });
+
+      if (!existing) {
+        throw new Error("Entry not found.");
       }
+
+      await tx.entry.update({
+        where: { id: existing.id },
+        data: {
+          name: parsed.name,
+          email: parsed.email,
+          reference: parsed.reference,
+          isEligible: parsed.isEligible
+        }
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: "entry.update",
+          entityType: "Entry",
+          entityId: existing.id,
+          metadata: JSON.stringify({
+            admin: admin.email,
+            campaignId,
+            ticketCode: existing.ticketCode
+          })
+        }
+      });
+
+      return campaign;
     });
   } catch (error) {
     if (isUniqueError(error)) {
@@ -437,11 +535,6 @@ export async function updateEntryAction(formData: FormData) {
     throw error;
   }
 
-  await writeAudit("entry.update", "Entry", existing.id, {
-    admin: admin.email,
-    campaignId,
-    ticketCode: existing.ticketCode
-  });
   revalidatePath(`/admin/campaigns/${campaignId}`);
   revalidatePath(`/campaigns/${campaign.slug}`);
   redirectToCampaignAdmin(campaignId, entryReturnParams(formData, "updated"));
@@ -451,24 +544,35 @@ export async function deleteEntryAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
   const entryId = formString(formData, "entryId");
-  const campaign = await requireEditableCampaign(campaignId);
-  const existing = await prisma.entry.findFirst({
-    where: { id: entryId, campaignId },
-    select: { id: true, name: true, email: true, reference: true, ticketCode: true }
-  });
+  const campaign = await prisma.$transaction(async (tx) => {
+    const campaign = await lockEditableCampaign(tx, campaignId);
+    const existing = await tx.entry.findFirst({
+      where: { id: entryId, campaignId },
+      select: { id: true, name: true, email: true, reference: true, ticketCode: true }
+    });
 
-  if (!existing) {
-    throw new Error("Entry not found.");
-  }
+    if (!existing) {
+      throw new Error("Entry not found.");
+    }
 
-  await prisma.entry.delete({ where: { id: existing.id } });
-  await writeAudit("entry.delete", "Entry", existing.id, {
-    admin: admin.email,
-    campaignId,
-    name: existing.name,
-    email: existing.email,
-    reference: existing.reference,
-    ticketCode: existing.ticketCode
+    await tx.entry.delete({ where: { id: existing.id } });
+    await tx.auditLog.create({
+      data: {
+        action: "entry.delete",
+        entityType: "Entry",
+        entityId: existing.id,
+        metadata: JSON.stringify({
+          admin: admin.email,
+          campaignId,
+          name: existing.name,
+          email: existing.email,
+          reference: existing.reference,
+          ticketCode: existing.ticketCode
+        })
+      }
+    });
+
+    return campaign;
   });
   revalidatePath(`/admin/campaigns/${campaignId}`);
   revalidatePath(`/campaigns/${campaign.slug}`);
@@ -514,7 +618,6 @@ export async function previewEntriesImportAction(_previousState: EntryImportActi
 export async function confirmEntriesImportAction(_previousState: EntryImportActionState, formData: FormData): Promise<EntryImportActionState> {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
-  const campaign = await requireEditableCampaign(campaignId);
   const csv = String(formData.get("csv") ?? "");
 
   if (!csv.trim()) {
@@ -542,33 +645,40 @@ export async function confirmEntriesImportAction(_previousState: EntryImportActi
     });
   }
 
-  const created = await prisma.$transaction(async (tx) => {
+  const { campaignSlug, created } = await prisma.$transaction(async (tx) => {
+    const campaign = await lockEditableCampaign(tx, campaignId);
     const entries = [];
 
     for (const entry of validation.validRows) {
       entries.push(
-        await tx.entry.create({
-          data: {
-            campaignId,
-            name: entry.name,
-            email: entry.email,
-            reference: entry.reference,
-            ticketCode: createTicketCode()
-          }
+        await createEntryWithTicket({
+          campaignId,
+          name: entry.name,
+          email: entry.email,
+          reference: entry.reference,
+          tx
         })
       );
     }
 
-    return entries;
+    await tx.auditLog.create({
+      data: {
+        action: "entry.import",
+        entityType: "Campaign",
+        entityId: campaignId,
+        metadata: JSON.stringify({
+          admin: admin.email,
+          importedCount: entries.length,
+          skippedCount: validation.summary.errorRows
+        })
+      }
+    });
+
+    return { campaignSlug: campaign.slug, created: entries };
   });
 
-  await writeAudit("entry.import", "Campaign", campaignId, {
-    admin: admin.email,
-    importedCount: created.length,
-    skippedCount: validation.summary.errorRows
-  });
   revalidatePath(`/admin/campaigns/${campaignId}`);
-  revalidatePath(`/campaigns/${campaign.slug}`);
+  revalidatePath(`/campaigns/${campaignSlug}`);
 
   return importState({
     status: "imported",
@@ -590,39 +700,54 @@ export async function confirmEntriesImportAction(_previousState: EntryImportActi
 export async function runDrawAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
-  const campaign = await prisma.campaign.findUnique({
-    where: { id: campaignId },
-    include: {
-      entries: true,
-      prizes: true,
-      draws: true
+  const { draw, slug } = await prisma.$transaction(async (tx) => {
+    const locked = await tx.campaign.updateMany({
+      where: {
+        id: campaignId,
+        status: { not: "ARCHIVED" },
+        draws: { none: {} }
+      },
+      data: {
+        status: "LOCKED",
+        allowPublicEntries: false
+      }
+    });
+
+    if (locked.count !== 1) {
+      throw new Error("This campaign already has a completed draw or is archived.");
     }
-  });
 
-  if (!campaign) {
-    throw new Error("Campaign not found.");
-  }
+    const campaign = await tx.campaign.findUnique({
+      where: { id: campaignId },
+      include: {
+        entries: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
+        prizes: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+        draws: true
+      }
+    });
 
-  if (!canModifyCampaign(asCampaignStatus(campaign.status))) {
-    throw new Error("Archived campaigns cannot be changed.");
-  }
+    if (!campaign) {
+      throw new Error("Campaign not found.");
+    }
 
-  if (campaign.draws.length > 0) {
-    throw new Error("This campaign already has a completed draw.");
-  }
+    if (!canModifyCampaign(asCampaignStatus(campaign.status))) {
+      throw new Error("Archived campaigns cannot be changed.");
+    }
 
-  if (campaign.prizes.length === 0) {
-    throw new Error("Add at least one prize before running a draw.");
-  }
+    if (campaign.draws.length > 0) {
+      throw new Error("This campaign already has a completed draw.");
+    }
 
-  const eligibleEntries = campaign.entries.filter((entry) => entry.isEligible);
-  if (eligibleEntries.length === 0) {
-    throw new Error("Add at least one eligible entry before running a draw.");
-  }
+    if (campaign.prizes.length === 0) {
+      throw new Error("Add at least one prize before running a draw.");
+    }
 
-  const selection = selectWinners(eligibleEntries, campaign.prizes);
+    const eligibleEntries = campaign.entries.filter((entry) => entry.isEligible);
+    if (eligibleEntries.length === 0) {
+      throw new Error("Add at least one eligible entry before running a draw.");
+    }
 
-  const draw = await prisma.$transaction(async (tx) => {
+    const selection = selectWinners(eligibleEntries, campaign.prizes);
     const createdDraw = await tx.draw.create({
       data: {
         campaignId,
@@ -641,7 +766,7 @@ export async function runDrawAction(formData: FormData) {
 
     await tx.campaign.update({
       where: { id: campaignId },
-      data: { status: "DRAWN", isPublic: true }
+      data: { status: "DRAWN", isPublic: true, allowPublicEntries: false }
     });
 
     await tx.auditLog.create({
@@ -659,11 +784,11 @@ export async function runDrawAction(formData: FormData) {
       }
     });
 
-    return createdDraw;
+    return { draw: createdDraw, slug: campaign.slug };
   });
 
   revalidatePath("/");
-  revalidatePath(`/campaigns/${campaign.slug}`);
+  revalidatePath(`/campaigns/${slug}`);
   revalidatePath(`/admin/campaigns/${campaignId}`);
   redirect(`/admin/campaigns/${campaignId}?draw=${draw.id}`);
 }

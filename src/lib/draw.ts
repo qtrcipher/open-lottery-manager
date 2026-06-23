@@ -5,6 +5,7 @@ export const drawAlgorithmVersion = "olm-random-shuffle-v1";
 export type DrawEntry = {
   id: string;
   isEligible: boolean;
+  createdAt?: Date;
 };
 
 export type DrawPrize = {
@@ -37,7 +38,12 @@ export function selectWinners(entries: DrawEntry[], prizes: DrawPrize[], seed = 
   seedHash: string;
   winners: WinnerSelection[];
 } {
-  const pool = entries.filter((entry) => entry.isEligible);
+  const pool = entries
+    .filter((entry) => entry.isEligible)
+    .sort((a, b) => {
+      const createdAtComparison = (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0);
+      return createdAtComparison || a.id.localeCompare(b.id);
+    });
   const orderedPrizes = [...prizes].sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id));
 
   for (let index = pool.length - 1; index > 0; index -= 1) {
