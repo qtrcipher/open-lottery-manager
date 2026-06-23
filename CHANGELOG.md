@@ -2,6 +2,25 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.21 - 2026-06-23
+
+Audit hardening fixes
+
+### Added
+
+- Tests for trusted public URL generation, spreadsheet formula neutralization, and public verification manifest compatibility.
+
+### Changed
+
+- Ticket receipt lookup links now use `PUBLIC_APP_URL` instead of request host headers in production.
+- CSV exports now neutralize spreadsheet formula prefixes in participant-controlled text fields.
+- Public draw verification bundles now use public entry and prize keys instead of exposing database IDs.
+
+### Operations
+
+- Deployment, README, environment, and security docs now document production SMTP URL requirements and database-ID-free bundles.
+- Dependabot now ignores Prisma major-version upgrades until a separate migration review is planned.
+
 ## v0.1.20 - 2026-06-23
 
 Public trust and verification polish

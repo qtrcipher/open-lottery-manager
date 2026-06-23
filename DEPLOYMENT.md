@@ -10,7 +10,7 @@ Use a tagged release instead of deploying an arbitrary branch:
 git clone https://github.com/qtrcipher/open-lottery-manager.git
 cd open-lottery-manager
 git fetch --tags
-RELEASE=v0.1.19
+RELEASE=v0.1.21
 git checkout "$RELEASE"
 cp .env.example .env
 npm install
@@ -140,7 +140,7 @@ Upgrade to a new release:
 ```bash
 docker compose -f docker-compose.prod.yml stop app
 # Run the backup command above before changing versions.
-TARGET_VERSION=v0.1.19
+TARGET_VERSION=v0.1.21
 git checkout "$TARGET_VERSION"
 docker compose -f docker-compose.prod.yml up --build -d
 docker compose -f docker-compose.prod.yml logs -f app
