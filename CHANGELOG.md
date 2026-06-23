@@ -2,6 +2,22 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.13 - 2026-06-23
+
+Release process documentation.
+
+### Added
+
+- Release guide documenting version prep, changelog updates, verification, tagging, GitHub release creation, and workflow validation.
+
+### Changed
+
+- README now links maintainers to the release guide.
+
+### Operations
+
+- Maintainers can follow one documented checklist for publishing and validating releases.
+
 ## v0.1.12 - 2026-06-23
 
 Operator runbook documentation.
