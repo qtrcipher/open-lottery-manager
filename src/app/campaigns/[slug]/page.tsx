@@ -248,6 +248,20 @@ export default async function CampaignPage({
               <dt className="text-ink/64">End</dt>
               <dd className="font-semibold">{formatDateTime(campaign.endsAt)}</dd>
             </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink/64">Timezone</dt>
+              <dd className="font-semibold">{campaign.timezone}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink/64">Scheduled draw</dt>
+              <dd className="font-semibold">{formatDateTime(campaign.drawScheduledAt)}</dd>
+            </div>
+            {campaign.sponsorName ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink/64">Sponsor</dt>
+                <dd className="font-semibold">{campaign.sponsorName}</dd>
+              </div>
+            ) : null}
             {settings.supportEmail ? (
               <div className="flex justify-between gap-4">
                 <dt className="text-ink/64">Support</dt>
@@ -270,6 +284,32 @@ export default async function CampaignPage({
           </dl>
         </Panel>
       </div>
+
+      {campaign.eligibilitySummary || campaign.prizeValueSummary || campaign.jurisdictionNotice ? (
+        <Panel className="mt-5">
+          <h2 className="text-xl font-semibold">Disclosures</h2>
+          <dl className="mt-4 grid gap-4 text-sm md:grid-cols-3">
+            {campaign.eligibilitySummary ? (
+              <div>
+                <dt className="font-semibold text-ink">Eligibility</dt>
+                <dd className="mt-2 whitespace-pre-wrap leading-6 text-ink/72">{campaign.eligibilitySummary}</dd>
+              </div>
+            ) : null}
+            {campaign.prizeValueSummary ? (
+              <div>
+                <dt className="font-semibold text-ink">Prize value</dt>
+                <dd className="mt-2 whitespace-pre-wrap leading-6 text-ink/72">{campaign.prizeValueSummary}</dd>
+              </div>
+            ) : null}
+            {campaign.jurisdictionNotice ? (
+              <div>
+                <dt className="font-semibold text-ink">Jurisdiction notice</dt>
+                <dd className="mt-2 whitespace-pre-wrap leading-6 text-ink/72">{campaign.jurisdictionNotice}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </Panel>
+      ) : null}
 
       <section className="mt-6 grid gap-5 lg:grid-cols-2">
         <Panel>

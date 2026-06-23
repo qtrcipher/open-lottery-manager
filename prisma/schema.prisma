@@ -21,6 +21,12 @@ model Campaign {
   slug        String         @unique
   description String
   rules       String
+  timezone    String         @default("UTC")
+  drawScheduledAt DateTime?
+  sponsorName      String?
+  eligibilitySummary String?
+  prizeValueSummary String?
+  jurisdictionNotice String?
   status      CampaignStatus @default(DRAFT)
   startsAt    DateTime?
   endsAt      DateTime?

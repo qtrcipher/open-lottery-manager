@@ -83,6 +83,12 @@ describe("campaignSchema", () => {
       title: "Customer Rewards",
       description: "Rewards campaign.",
       rules: "Terms apply.",
+      timezone: "UTC",
+      drawScheduledAt: "",
+      sponsorName: "",
+      eligibilitySummary: "Open to eligible customers.",
+      prizeValueSummary: "",
+      jurisdictionNotice: "",
       startsAt: "",
       endsAt: "",
       isPublic: true,
@@ -91,6 +97,8 @@ describe("campaignSchema", () => {
     });
 
     expect(parsed.requireLookupReference).toBe(true);
+    expect(parsed.eligibilitySummary).toBe("Open to eligible customers.");
+    expect(parsed.sponsorName).toBeNull();
   });
 });
 

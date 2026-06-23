@@ -27,6 +27,32 @@ export default async function NewCampaignPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
+                <Label>Timezone</Label>
+                <TextInput name="timezone" required defaultValue="UTC" placeholder="UTC" />
+              </div>
+              <div>
+                <Label>Scheduled draw</Label>
+                <TextInput name="drawScheduledAt" type="datetime-local" />
+              </div>
+            </div>
+            <div>
+              <Label>Sponsor or operator</Label>
+              <TextInput name="sponsorName" placeholder="Optional public sponsor name" />
+            </div>
+            <div>
+              <Label>Eligibility summary</Label>
+              <TextArea name="eligibilitySummary" placeholder="Short public eligibility summary." />
+            </div>
+            <div>
+              <Label>Prize value summary</Label>
+              <TextArea name="prizeValueSummary" placeholder="Approximate prize values or prize disclosure notes." />
+            </div>
+            <div>
+              <Label>Jurisdiction notice</Label>
+              <TextArea name="jurisdictionNotice" placeholder="Void where prohibited, licensing, or local restrictions." />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
                 <Label>Starts at</Label>
                 <TextInput name="startsAt" type="datetime-local" />
               </div>

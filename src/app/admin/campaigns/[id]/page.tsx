@@ -255,6 +255,35 @@ export default async function CampaignAdminPage({
                 <p className="whitespace-pre-wrap">{campaign.rules}</p>
               </div>
               <div>
+                <h3 className="font-semibold text-ink">Structured disclosures</h3>
+                <dl className="mt-2 grid gap-2">
+                  <div>
+                    <dt className="font-semibold">Timezone</dt>
+                    <dd>{campaign.timezone}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold">Scheduled draw</dt>
+                    <dd>{campaign.drawScheduledAt ? campaign.drawScheduledAt.toLocaleString() : "Not set"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold">Sponsor</dt>
+                    <dd>{campaign.sponsorName || "Not set"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold">Eligibility</dt>
+                    <dd className="whitespace-pre-wrap">{campaign.eligibilitySummary || "Not set"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold">Prize value</dt>
+                    <dd className="whitespace-pre-wrap">{campaign.prizeValueSummary || "Not set"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold">Jurisdiction notice</dt>
+                    <dd className="whitespace-pre-wrap">{campaign.jurisdictionNotice || "Not set"}</dd>
+                  </div>
+                </dl>
+              </div>
+              <div>
                 <h3 className="font-semibold text-ink">Public entries</h3>
                 <p>{campaign.allowPublicEntries ? "Enabled" : "Disabled"}</p>
               </div>
@@ -277,6 +306,32 @@ export default async function CampaignAdminPage({
               <div>
                 <Label>Rules</Label>
                 <TextArea name="rules" required defaultValue={campaign.rules} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>Timezone</Label>
+                  <TextInput name="timezone" required defaultValue={campaign.timezone} placeholder="UTC" />
+                </div>
+                <div>
+                  <Label>Scheduled draw</Label>
+                  <TextInput name="drawScheduledAt" type="datetime-local" defaultValue={formatDateInput(campaign.drawScheduledAt)} />
+                </div>
+              </div>
+              <div>
+                <Label>Sponsor or operator</Label>
+                <TextInput name="sponsorName" defaultValue={campaign.sponsorName ?? ""} placeholder="Optional public sponsor name" />
+              </div>
+              <div>
+                <Label>Eligibility summary</Label>
+                <TextArea name="eligibilitySummary" defaultValue={campaign.eligibilitySummary ?? ""} />
+              </div>
+              <div>
+                <Label>Prize value summary</Label>
+                <TextArea name="prizeValueSummary" defaultValue={campaign.prizeValueSummary ?? ""} />
+              </div>
+              <div>
+                <Label>Jurisdiction notice</Label>
+                <TextArea name="jurisdictionNotice" defaultValue={campaign.jurisdictionNotice ?? ""} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
