@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { canAcceptPublicEntries, type CampaignStatusValue } from "@/lib/campaign-lifecycle";
+import { getAppSettings } from "@/lib/app-settings";
+import { sendTicketReceipt } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, isHoneypotFilled, rateLimitSubjectFromHeaders } from "@/lib/rate-limit";
 import { createTicketCode } from "@/lib/tickets";
@@ -43,6 +45,14 @@ function uniqueFailureCode(error: Prisma.PrismaClientKnownRequestError): string 
   }
 
   return "duplicate";
+}
+
+function publicBaseUrl(requestHeaders: Headers): string {
+  const trustProxyHeaders = process.env.TRUST_PROXY_HEADERS === "true";
+  const host = trustProxyHeaders ? requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") : requestHeaders.get("host");
+  const protocol = trustProxyHeaders ? requestHeaders.get("x-forwarded-proto") || "https" : process.env.NODE_ENV === "production" ? "https" : "http";
+
+  return `${protocol}://${host ?? "localhost:3000"}`;
 }
 
 async function createEntryWithTicket({
@@ -116,6 +126,7 @@ export async function createPublicEntryAction(formData: FormData) {
     where: { slug },
     select: {
       id: true,
+      title: true,
       slug: true,
       status: true,
       isPublic: true,
@@ -225,6 +236,30 @@ export async function createPublicEntryAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath(`/campaigns/${campaign.slug}`);
+  const settings = await getAppSettings();
+  const receipt = await sendTicketReceipt({
+    to: entry.email,
+    participantName: entry.name,
+    campaignTitle: campaign.title,
+    ticketCode: entry.ticketCode,
+    lookupUrl: `${publicBaseUrl(requestHeaders)}/campaigns/${campaign.slug}/lookup`,
+    supportEmail: settings.supportEmail
+  });
+
+  if (receipt.attempted && !receipt.sent) {
+    await prisma.auditLog.create({
+      data: {
+        action: "email.ticket_receipt_failed",
+        entityType: "Entry",
+        entityId: entry.id,
+        metadata: JSON.stringify({
+          campaignId: campaign.id,
+          error: receipt.error
+        })
+      }
+    });
+  }
+
   redirectToCampaign(campaign.slug, { ticket: entry.ticketCode });
 }
 
