@@ -7,8 +7,9 @@ import { redirect } from "next/navigation";
 import { canAcceptPublicEntries, type CampaignStatusValue } from "@/lib/campaign-lifecycle";
 import { getAppSettings } from "@/lib/app-settings";
 import { detectEntryRisk, reviewStatusForRiskFlags } from "@/lib/abuse";
-import { sendTicketReceipt } from "@/lib/email";
+import { isSmtpConfigured, sendTicketReceipt } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
+import { publicAppUrl } from "@/lib/public-url";
 import { checkRateLimit, isHoneypotFilled, rateLimitSubjectFromHeaders } from "@/lib/rate-limit";
 import { createTicketCode } from "@/lib/tickets";
 import { verifyTurnstileToken } from "@/lib/turnstile";
@@ -47,14 +48,6 @@ function uniqueFailureCode(error: Prisma.PrismaClientKnownRequestError): string 
   }
 
   return "duplicate";
-}
-
-function publicBaseUrl(requestHeaders: Headers): string {
-  const trustProxyHeaders = process.env.TRUST_PROXY_HEADERS === "true";
-  const host = trustProxyHeaders ? requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") : requestHeaders.get("host");
-  const protocol = trustProxyHeaders ? requestHeaders.get("x-forwarded-proto") || "https" : process.env.NODE_ENV === "production" ? "https" : "http";
-
-  return `${protocol}://${host ?? "localhost:3000"}`;
 }
 
 function remoteIpFromHeaders(requestHeaders: Headers): string | undefined {
@@ -266,19 +259,36 @@ export async function createPublicEntryAction(formData: FormData) {
   revalidatePath("/");
   revalidatePath(`/campaigns/${campaign.slug}`);
   const settings = await getAppSettings();
-  const receipt = await sendTicketReceipt({
-    to: entry.email,
-    participantName: entry.name,
-    campaignTitle: campaign.title,
-    ticketCode: entry.ticketCode,
-    lookupUrl: `${publicBaseUrl(requestHeaders)}/campaigns/${campaign.slug}/lookup`,
-    supportEmail: settings.supportEmail
-  });
+  const lookupUrl = publicAppUrl(`/campaigns/${campaign.slug}/lookup`, { headers: requestHeaders });
+  const receipt = lookupUrl
+    ? await sendTicketReceipt({
+        to: entry.email,
+        participantName: entry.name,
+        campaignTitle: campaign.title,
+        ticketCode: entry.ticketCode,
+        lookupUrl,
+        supportEmail: settings.supportEmail
+      })
+    : { attempted: false, sent: false, error: "PUBLIC_APP_URL is required for production ticket receipt links." };
 
   if (receipt.attempted && !receipt.sent) {
     await prisma.auditLog.create({
       data: {
         action: "email.ticket_receipt_failed",
+        entityType: "Entry",
+        entityId: entry.id,
+        metadata: JSON.stringify({
+          campaignId: campaign.id,
+          error: receipt.error
+        })
+      }
+    });
+  }
+
+  if (!lookupUrl && isSmtpConfigured()) {
+    await prisma.auditLog.create({
+      data: {
+        action: "email.ticket_receipt_skipped",
         entityType: "Entry",
         entityId: entry.id,
         metadata: JSON.stringify({

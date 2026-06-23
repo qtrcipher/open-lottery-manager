@@ -3,7 +3,7 @@ import { ArrowLeft, Download, Hash, ShieldCheck, Ticket, Trophy } from "lucide-r
 import { notFound } from "next/navigation";
 import { OperatorBrand } from "@/components/brand";
 import { PageShell, Panel, StatusBadge } from "@/components/ui";
-import { createDrawVerificationSummary } from "@/lib/draw-verification";
+import { createDrawVerificationSummary, hasPublicDrawManifest } from "@/lib/draw-verification";
 import { getAppSettings } from "@/lib/app-settings";
 import { prisma } from "@/lib/prisma";
 
@@ -47,6 +47,7 @@ export default async function DrawVerificationPage({ params }: { params: Promise
   }
 
   const summary = createDrawVerificationSummary(campaign.entries, draw.winners);
+  const hasDownloadableBundle = Boolean(draw.entryManifestHash) && hasPublicDrawManifest(draw.entryManifestJson);
 
   return (
     <PageShell>
@@ -109,7 +110,7 @@ export default async function DrawVerificationPage({ params }: { params: Promise
               <dd className="mt-1 break-all font-mono text-xs">{draw.algorithmVersion}</dd>
             </div>
           </dl>
-          {draw.entryManifestHash ? (
+          {hasDownloadableBundle ? (
             <Link
               className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:bg-paper"
               href={`/campaigns/${campaign.slug}/verify/bundle.json`}
@@ -168,21 +169,21 @@ export default async function DrawVerificationPage({ params }: { params: Promise
 
       <Panel className="mt-5">
         <h2 className="text-xl font-semibold">Verification note</h2>
-        {draw.entryManifestHash ? (
+        {hasDownloadableBundle ? (
           <div className="mt-3 space-y-3 text-sm leading-6 text-ink/70">
             <p>
               Download the bundle and run <span className="font-mono text-xs">npm run verify:draw -- bundle.json</span> from this repository to replay
               the draw from the frozen eligible-entry manifest and revealed seed.
             </p>
             <p>
-              The bundle omits participant names and emails. It uses ticket codes so participants can inspect the published result without exposing
-              private entry details.
+              The bundle omits participant names, emails, and database IDs. It uses public entry keys and ticket codes so participants can inspect the
+              published result without exposing private entry details.
             </p>
           </div>
         ) : (
           <p className="mt-3 text-sm leading-6 text-ink/70">
-            This is a legacy draw record created before verification bundles were available. It remains visible, but it cannot be independently replayed
-            from a frozen manifest.
+            This draw record does not have a public verification bundle in the current format. It remains visible, but it cannot be independently replayed
+            from a downloadable manifest.
           </p>
         )}
         <p className="mt-3 text-sm leading-6 text-ink/70">

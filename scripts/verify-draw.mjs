@@ -44,9 +44,9 @@ function hashToNumber(seed, index) {
 
 function selectWinners(entries, prizes, seed) {
   const pool = entries
-    .map((entry) => ({ id: entry.entryId, createdAt: new Date(entry.createdAt) }))
+    .map((entry) => ({ id: entry.entryKey, createdAt: new Date(entry.createdAt) }))
     .sort((first, second) => first.createdAt.getTime() - second.createdAt.getTime() || first.id.localeCompare(second.id));
-  const orderedPrizes = [...prizes].sort((first, second) => first.sortOrder - second.sortOrder || first.prizeId.localeCompare(second.prizeId));
+  const orderedPrizes = [...prizes].sort((first, second) => first.sortOrder - second.sortOrder || first.prizeKey.localeCompare(second.prizeKey));
   const winners = [];
   let poolIndex = 0;
   let rank = 1;
@@ -58,12 +58,12 @@ function selectWinners(entries, prizes, seed) {
 
   for (const prize of orderedPrizes) {
     for (let count = 0; count < prize.quantity && poolIndex < pool.length; count += 1) {
-      const entry = entries.find((candidate) => candidate.entryId === pool[poolIndex].id);
+      const entry = entries.find((candidate) => candidate.entryKey === pool[poolIndex].id);
       winners.push({
         rank,
-        entryId: pool[poolIndex].id,
+        entryKey: pool[poolIndex].id,
         ticketCode: entry?.ticketCode ?? "",
-        prizeId: prize.prizeId,
+        prizeKey: prize.prizeKey,
         prizeName: prize.name
       });
       poolIndex += 1;
@@ -124,7 +124,7 @@ if (errors.length > 0) {
 
 console.log("Draw bundle verified.");
 console.log(`Campaign: ${bundle.campaign.title}`);
-console.log(`Draw: ${bundle.draw.id}`);
+console.log(`Draw completed: ${bundle.draw.createdAt}`);
 console.log(`Winners: ${bundle.winners.length}`);
 console.log(`Seed hash: ${seedHash}`);
 console.log(`Entry manifest hash: ${entryManifestHash}`);

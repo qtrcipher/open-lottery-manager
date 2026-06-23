@@ -56,21 +56,40 @@ function verificationHash(value) {
   return createHash("sha256").update(canonicalJson(value)).digest("hex");
 }
 
+function publicEntryKey(index) {
+  return `entry-${String(index + 1).padStart(6, "0")}`;
+}
+
+function publicPrizeKey(index) {
+  return `prize-${String(index + 1).padStart(4, "0")}`;
+}
+
+function toPublicManifestEntry(entry) {
+  return {
+    entryKey: entry.entryKey,
+    ticketCode: entry.ticketCode,
+    createdAt: entry.createdAt
+  };
+}
+
 function createManifest(entryRecords) {
   const manifestEntries = entryRecords
     .filter((entry) => entry.isEligible)
     .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
-    .map((entry) => ({
-      entryId: entry.id,
+    .map((entry, index) => ({
+      entryKey: publicEntryKey(index),
+      sourceEntryId: entry.id,
       ticketCode: entry.ticketCode,
       createdAt: entry.createdAt.toISOString()
     }));
+  const publicEntries = manifestEntries.map(toPublicManifestEntry);
   const json = canonicalJson(manifestEntries);
 
   return {
     entries: manifestEntries,
+    publicEntries,
     json,
-    hash: createHash("sha256").update(json).digest("hex")
+    hash: createHash("sha256").update(canonicalJson(publicEntries)).digest("hex")
   };
 }
 
@@ -105,18 +124,25 @@ function selectWinners(entryRecords, prizeRecords) {
 }
 
 function createBundle({ campaign, draw, manifest, prizes, winners }) {
-  const entryById = new Map(manifest.entries.map((entry) => [entry.entryId, entry]));
-  const prizeById = new Map(prizes.map((prize) => [prize.id, prize]));
+  const entryById = new Map(manifest.entries.map((entry) => [entry.sourceEntryId, entry]));
+  const prizeRows = [...prizes]
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id))
+    .map((prize, index) => ({
+      sourcePrizeId: prize.id,
+      prizeKey: publicPrizeKey(index),
+      name: prize.name,
+      quantity: prize.quantity,
+      sortOrder: prize.sortOrder
+    }));
+  const prizeById = new Map(prizeRows.map((prize) => [prize.sourcePrizeId, prize]));
 
   return {
-    schemaVersion: "olm-draw-bundle-v1",
+    schemaVersion: "olm-draw-bundle-v2",
     campaign: {
-      id: campaign.id,
       slug: campaign.slug,
       title: campaign.title
     },
     draw: {
-      id: draw.id,
       createdAt: draw.createdAt.toISOString(),
       seed: draw.seed,
       seedHash: draw.seedHash,
@@ -124,15 +150,8 @@ function createBundle({ campaign, draw, manifest, prizes, winners }) {
       entryManifestHash: manifest.hash,
       verificationBundleHash: null
     },
-    entries: manifest.entries,
-    prizes: prizes
-      .map((prize) => ({
-        prizeId: prize.id,
-        name: prize.name,
-        quantity: prize.quantity,
-        sortOrder: prize.sortOrder
-      }))
-      .sort((a, b) => a.sortOrder - b.sortOrder || a.prizeId.localeCompare(b.prizeId)),
+    entries: manifest.publicEntries,
+    prizes: prizeRows.map(({ sourcePrizeId: _sourcePrizeId, ...prize }) => prize),
     winners: winners
       .sort((a, b) => a.rank - b.rank)
       .map((winner) => {
@@ -141,9 +160,9 @@ function createBundle({ campaign, draw, manifest, prizes, winners }) {
 
         return {
           rank: winner.rank,
-          entryId: winner.entryId,
+          entryKey: entry?.entryKey ?? "",
           ticketCode: entry?.ticketCode ?? "",
-          prizeId: winner.prizeId,
+          prizeKey: prize?.prizeKey ?? "",
           prizeName: prize?.name ?? ""
         };
       })

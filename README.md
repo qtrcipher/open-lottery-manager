@@ -94,7 +94,7 @@ Update `.env` with:
 - `ADMIN_EMAIL`: the admin login email.
 - `ADMIN_PASSWORD_HASH`: the generated password hash.
 
-Optional settings include SMTP receipt variables and Cloudflare Turnstile keys from `.env.example`.
+Optional settings include SMTP receipt variables and Cloudflare Turnstile keys from `.env.example`. Set `PUBLIC_APP_URL` to the public HTTPS origin when SMTP receipts are enabled in production so ticket lookup links do not depend on request headers.
 
 Then start the app with the production template:
 
@@ -114,7 +114,7 @@ For production setup, backups, reverse proxy notes, upgrades, and troubleshootin
 - Put the app behind HTTPS and a trusted reverse proxy. Set `TRUST_PROXY_HEADERS=true` only when your proxy controls forwarded IP headers.
 - Set a real `ADMIN_EMAIL`, configure support details in `/admin/settings`, and replace demo rules before publishing campaigns.
 - Verify runtime health with `/api/health` after deployment.
-- Configure SMTP only if you want ticket receipt emails; entries remain valid when email is not configured.
+- Configure SMTP only if you want ticket receipt emails; entries remain valid when email is not configured. Set `PUBLIC_APP_URL` before enabling SMTP in production.
 - Configure Turnstile only if you want a public-entry challenge; keep rate limits and honeypots enabled either way.
 - Confirm legal, tax, age, prize, advertising, and licensing requirements before accepting public entries.
 - Keep dependencies updated and review `SECURITY.md` before reporting vulnerabilities.
@@ -142,7 +142,7 @@ Public entry, ticket lookup, and admin login forms include basic abuse protectio
 
 Operators can optionally configure Cloudflare Turnstile with `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`. Public entries from disposable email domains are flagged for admin review. Flagged or rejected entries are excluded from draws until an admin approves them.
 
-Operators can optionally configure SMTP with `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, and related credentials. Ticket receipts are best-effort: delivery failures are logged for admins but do not reject a participant entry.
+Operators can optionally configure SMTP with `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, and related credentials. Set `PUBLIC_APP_URL` to the public HTTPS origin before enabling SMTP in production. Ticket receipts are best-effort: delivery failures or missing production link configuration are logged for admins but do not reject a participant entry.
 
 ## CSV Export
 
@@ -162,7 +162,7 @@ Delete is only available for draft campaigns with no completed draw. The admin m
 
 ## Draw Record
 
-Completed public campaigns include a draw record page at `/campaigns/[slug]/verify`. It shows the revealed seed, seed hash, frozen entry manifest hash, verification bundle hash, algorithm version, draw timestamp, entry counts, winner count, and ordered winners for participant inspection.
+Completed public campaigns include a draw record page at `/campaigns/[slug]/verify`. It shows the revealed seed, seed hash, frozen entry manifest hash, verification bundle hash, algorithm version, draw timestamp, entry counts, winner count, and ordered winners for participant inspection. New verification bundles omit participant names, emails, and database IDs; they use public entry keys, public prize keys, and ticket codes for replay.
 
 Download `/campaigns/[slug]/verify/bundle.json` and replay it locally:
 

@@ -806,7 +806,6 @@ export async function runDrawAction(formData: FormData) {
     const bundle = buildDrawVerificationBundle({
       campaign,
       draw: {
-        id: createdDraw.id,
         createdAt: createdDraw.createdAt,
         seed: createdDraw.seed,
         seedHash: createdDraw.seedHash,

@@ -196,8 +196,16 @@ function formatCsvValue(value: CsvValue): string {
   return String(value);
 }
 
+function neutralizeSpreadsheetFormula(value: CsvValue, formatted: string): string {
+  if (typeof value === "string" && /^[\s]*[=+\-@]/.test(formatted)) {
+    return `'${formatted}`;
+  }
+
+  return formatted;
+}
+
 function escapeCsvCell(value: CsvValue): string {
-  const formatted = formatCsvValue(value);
+  const formatted = neutralizeSpreadsheetFormula(value, formatCsvValue(value));
   const escaped = formatted.replaceAll('"', '""');
 
   if (/[",\r\n]/.test(escaped)) {

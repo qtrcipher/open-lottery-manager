@@ -31,9 +31,13 @@ export type DrawVerificationSummary = {
 };
 
 export type DrawManifestEntry = {
-  entryId: string;
+  entryKey: string;
   ticketCode: string;
   createdAt: string;
+};
+
+export type StoredDrawManifestEntry = DrawManifestEntry & {
+  sourceEntryId: string;
 };
 
 export type DrawManifestSourceEntry = {
@@ -44,20 +48,19 @@ export type DrawManifestSourceEntry = {
 };
 
 export type DrawManifest = {
-  entries: DrawManifestEntry[];
+  entries: StoredDrawManifestEntry[];
+  publicEntries: DrawManifestEntry[];
   json: string;
   hash: string;
 };
 
 export type DrawVerificationBundle = {
-  schemaVersion: "olm-draw-bundle-v1";
+  schemaVersion: "olm-draw-bundle-v2";
   campaign: {
-    id: string;
     slug: string;
     title: string;
   };
   draw: {
-    id: string;
     createdAt: string;
     seed: string;
     seedHash: string;
@@ -67,16 +70,16 @@ export type DrawVerificationBundle = {
   };
   entries: DrawManifestEntry[];
   prizes: {
-    prizeId: string;
+    prizeKey: string;
     name: string;
     quantity: number;
     sortOrder: number;
   }[];
   winners: {
     rank: number;
-    entryId: string;
+    entryKey: string;
     ticketCode: string;
-    prizeId: string;
+    prizeKey: string;
     prizeName: string;
   }[];
 };
@@ -91,13 +94,11 @@ export type DrawVerificationResult = {
 };
 
 type BundleCampaign = {
-  id: string;
   slug: string;
   title: string;
 };
 
 type BundleDraw = {
-  id: string;
   createdAt: Date;
   seed: string;
   seedHash: string;
@@ -142,21 +143,67 @@ export function createVerificationHash(value: unknown): string {
   return hashString(canonicalJson(value));
 }
 
+function publicEntryKey(index: number): string {
+  return `entry-${String(index + 1).padStart(6, "0")}`;
+}
+
+function publicPrizeKey(index: number): string {
+  return `prize-${String(index + 1).padStart(4, "0")}`;
+}
+
+function toPublicManifestEntry(entry: StoredDrawManifestEntry): DrawManifestEntry {
+  return {
+    entryKey: entry.entryKey,
+    ticketCode: entry.ticketCode,
+    createdAt: entry.createdAt
+  };
+}
+
+export function isStoredDrawManifestEntries(value: unknown): value is StoredDrawManifestEntry[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) =>
+        entry &&
+        typeof entry === "object" &&
+        typeof (entry as StoredDrawManifestEntry).entryKey === "string" &&
+        typeof (entry as StoredDrawManifestEntry).sourceEntryId === "string" &&
+        typeof (entry as StoredDrawManifestEntry).ticketCode === "string" &&
+        typeof (entry as StoredDrawManifestEntry).createdAt === "string"
+    )
+  );
+}
+
+export function hasPublicDrawManifest(manifestJson: string | null): boolean {
+  if (!manifestJson) {
+    return false;
+  }
+
+  try {
+    return isStoredDrawManifestEntries(JSON.parse(manifestJson));
+  } catch {
+    return false;
+  }
+}
+
 export function createDrawEntryManifest(entries: DrawManifestSourceEntry[]): DrawManifest {
   const manifestEntries = entries
     .filter((entry) => entry.isEligible)
     .sort((first, second) => first.createdAt.getTime() - second.createdAt.getTime() || first.id.localeCompare(second.id))
-    .map((entry) => ({
-      entryId: entry.id,
+    .map((entry, index) => ({
+      entryKey: publicEntryKey(index),
+      sourceEntryId: entry.id,
       ticketCode: entry.ticketCode,
       createdAt: entry.createdAt.toISOString()
     }));
+  const publicEntries = manifestEntries.map(toPublicManifestEntry);
   const json = canonicalJson(manifestEntries);
 
   return {
     entries: manifestEntries,
+    publicEntries,
     json,
-    hash: hashString(json)
+    hash: hashString(canonicalJson(publicEntries))
   };
 }
 
@@ -183,42 +230,47 @@ export function buildDrawVerificationBundle({
 }: {
   campaign: BundleCampaign;
   draw: BundleDraw;
-  entries: DrawManifestEntry[];
+  entries: StoredDrawManifestEntry[];
   prizes: BundlePrize[];
   winners: WinnerSelection[];
 }): DrawVerificationBundle {
-  const entryById = new Map(entries.map((entry) => [entry.entryId, entry]));
-  const prizeById = new Map(prizes.map((prize) => [prize.id, prize]));
+  const entryBySourceId = new Map(entries.map((entry) => [entry.sourceEntryId, entry]));
+  const orderedPrizes = [...prizes].sort((first, second) => first.sortOrder - second.sortOrder || first.id.localeCompare(second.id));
+  const prizeRows = orderedPrizes.map((prize, index) => ({
+    sourcePrizeId: prize.id,
+    prizeKey: publicPrizeKey(index),
+    name: prize.name,
+    quantity: prize.quantity,
+    sortOrder: prize.sortOrder
+  }));
+  const prizeBySourceId = new Map(prizeRows.map((prize) => [prize.sourcePrizeId, prize]));
+  const publicEntries = entries.map(toPublicManifestEntry);
   const bundle: DrawVerificationBundle = {
-    schemaVersion: "olm-draw-bundle-v1",
+    schemaVersion: "olm-draw-bundle-v2",
     campaign: {
-      id: campaign.id,
       slug: campaign.slug,
       title: campaign.title
     },
     draw: {
-      id: draw.id,
       createdAt: draw.createdAt.toISOString(),
       seed: draw.seed,
       seedHash: draw.seedHash,
       algorithmVersion: draw.algorithmVersion,
-      entryManifestHash: draw.entryManifestHash ?? createVerificationHash(entries),
+      entryManifestHash: draw.entryManifestHash ?? createVerificationHash(publicEntries),
       verificationBundleHash: draw.verificationBundleHash
     },
-    entries,
-    prizes: prizes
-      .map((prize) => ({
-        prizeId: prize.id,
-        name: prize.name,
-        quantity: prize.quantity,
-        sortOrder: prize.sortOrder
-      }))
-      .sort((first, second) => first.sortOrder - second.sortOrder || first.prizeId.localeCompare(second.prizeId)),
+    entries: publicEntries,
+    prizes: prizeRows.map((prize) => ({
+      prizeKey: prize.prizeKey,
+      name: prize.name,
+      quantity: prize.quantity,
+      sortOrder: prize.sortOrder
+    })),
     winners: winners
       .sort((first, second) => first.rank - second.rank)
       .map((winner) => {
-        const entry = entryById.get(winner.entryId);
-        const prize = prizeById.get(winner.prizeId);
+        const entry = entryBySourceId.get(winner.entryId);
+        const prize = prizeBySourceId.get(winner.prizeId);
 
         if (!entry || !prize) {
           throw new Error("Verification bundle winner references a missing entry or prize.");
@@ -226,9 +278,9 @@ export function buildDrawVerificationBundle({
 
         return {
           rank: winner.rank,
-          entryId: winner.entryId,
+          entryKey: entry.entryKey,
           ticketCode: entry.ticketCode,
-          prizeId: winner.prizeId,
+          prizeKey: prize.prizeKey,
           prizeName: prize.name
         };
       })
@@ -255,15 +307,15 @@ export function verifyDrawBundle(bundle: DrawVerificationBundle): DrawVerificati
     }
   };
   const computedBundleHash = createVerificationHash(bundleForHash);
-  const entryLookup = new Map(bundle.entries.map((entry) => [entry.entryId, entry]));
+  const entryLookup = new Map(bundle.entries.map((entry) => [entry.entryKey, entry]));
   const computedSelection = selectWinners(
     bundle.entries.map((entry) => ({
-      id: entry.entryId,
+      id: entry.entryKey,
       isEligible: true,
       createdAt: new Date(entry.createdAt)
     })),
     bundle.prizes.map((prize) => ({
-      id: prize.prizeId,
+      id: prize.prizeKey,
       quantity: prize.quantity,
       sortOrder: prize.sortOrder
     })),
@@ -271,13 +323,13 @@ export function verifyDrawBundle(bundle: DrawVerificationBundle): DrawVerificati
   );
   const computedWinners = computedSelection.winners.map((winner) => {
     const entry = entryLookup.get(winner.entryId);
-    const prize = bundle.prizes.find((candidate) => candidate.prizeId === winner.prizeId);
+    const prize = bundle.prizes.find((candidate) => candidate.prizeKey === winner.prizeId);
 
     return {
       rank: winner.rank,
-      entryId: winner.entryId,
+      entryKey: winner.entryId,
       ticketCode: entry?.ticketCode ?? "",
-      prizeId: winner.prizeId,
+      prizeKey: winner.prizeId,
       prizeName: prize?.name ?? ""
     };
   });

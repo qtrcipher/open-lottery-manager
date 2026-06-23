@@ -5,6 +5,7 @@ import {
   createVerificationBundleHash,
   createVerificationHash,
   createDrawVerificationSummary,
+  hasPublicDrawManifest,
   verifyDrawBundle
 } from "./draw-verification";
 
@@ -82,17 +83,27 @@ describe("draw verification bundle", () => {
   it("freezes only eligible entries in deterministic order", () => {
     const manifest = createDrawEntryManifest(entries);
 
-    expect(manifest.entries.map((entry) => entry.entryId)).toEqual(["entry-a", "entry-b"]);
+    expect(manifest.entries.map((entry) => entry.sourceEntryId)).toEqual(["entry-a", "entry-b"]);
+    expect(manifest.publicEntries.map((entry) => entry.entryKey)).toEqual(["entry-000001", "entry-000002"]);
     expect(manifest.entries.map((entry) => entry.ticketCode)).toEqual(["TKT-A", "TKT-B"]);
-    expect(manifest.hash).toBe(createVerificationHash(manifest.entries));
+    expect(manifest.hash).toBe(createVerificationHash(manifest.publicEntries));
+  });
+
+  it("identifies manifests that are safe for public bundle download", () => {
+    const manifest = createDrawEntryManifest(entries);
+
+    expect(hasPublicDrawManifest(manifest.json)).toBe(true);
+    expect(hasPublicDrawManifest(JSON.stringify([{ entryId: "entry-a", ticketCode: "TKT-A", createdAt: "2026-06-22T10:00:00.000Z" }]))).toBe(
+      false
+    );
+    expect(hasPublicDrawManifest("not-json")).toBe(false);
   });
 
   it("builds and verifies a replayable public bundle", () => {
     const manifest = createDrawEntryManifest(entries);
     const bundle = buildDrawVerificationBundle({
-      campaign: { id: "campaign-1", slug: "summer", title: "Summer Draw" },
+      campaign: { slug: "summer", title: "Summer Draw" },
       draw: {
-        id: "draw-1",
         createdAt: new Date("2026-06-22T11:00:00.000Z"),
         seed: "fixed-seed",
         seedHash: "a76adeebd4a238b42161a8d8b52b8978df81fc96c50dc76ef302a9f7476df431",
@@ -115,6 +126,13 @@ describe("draw verification bundle", () => {
       }
     };
 
+    expect(bundle.campaign).toEqual({ slug: "summer", title: "Summer Draw" });
+    expect(bundle.draw).not.toHaveProperty("id");
+    expect(bundle.entries).toEqual(manifest.publicEntries);
+    expect(bundle.entries[0]).not.toHaveProperty("sourceEntryId");
+    expect(bundle.winners[0]).toMatchObject({ entryKey: "entry-000002", prizeKey: "prize-0001" });
+    expect(bundle.winners[0]).not.toHaveProperty("entryId");
+    expect(bundle.prizes[0]).not.toHaveProperty("prizeId");
     expect(verifyDrawBundle(withStoredHash)).toMatchObject({
       ok: true,
       errors: [],
@@ -125,9 +143,8 @@ describe("draw verification bundle", () => {
   it("reports tampered winner bundles", () => {
     const manifest = createDrawEntryManifest(entries);
     const bundle = buildDrawVerificationBundle({
-      campaign: { id: "campaign-1", slug: "summer", title: "Summer Draw" },
+      campaign: { slug: "summer", title: "Summer Draw" },
       draw: {
-        id: "draw-1",
         createdAt: new Date("2026-06-22T11:00:00.000Z"),
         seed: "fixed-seed",
         seedHash: "a76adeebd4a238b42161a8d8b52b8978df81fc96c50dc76ef302a9f7476df431",

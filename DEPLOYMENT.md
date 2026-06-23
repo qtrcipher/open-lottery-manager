@@ -22,7 +22,7 @@ Edit `.env` before starting:
 - `AUTH_SECRET`: a random value with at least 24 characters.
 - `ADMIN_EMAIL`: the operator admin login email.
 - `ADMIN_PASSWORD_HASH`: the generated password hash.
-- `PUBLIC_APP_URL`: optional public HTTPS URL shown in admin system status.
+- `PUBLIC_APP_URL`: public HTTPS URL for admin system status, deployment checks, and outbound ticket lookup links. Required for production ticket receipt links when SMTP is configured.
 - `TRUST_PROXY_HEADERS`: set to `true` only when a trusted proxy controls `x-forwarded-for`, `x-real-ip`, or `cf-connecting-ip`.
 - SMTP variables: optional ticket receipt email settings. Leave empty to disable email.
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`: optional Cloudflare Turnstile challenge for public entries.
@@ -122,7 +122,7 @@ The app emits baseline browser security headers on every route, including Conten
 
 ## Optional Email And Turnstile
 
-The app does not send email unless SMTP is configured. When SMTP is configured, public entry ticket receipts are sent after successful entry creation. Delivery failures are recorded in the audit log but do not invalidate the entry.
+The app does not send email unless SMTP is configured. When SMTP is configured, public entry ticket receipts are sent after successful entry creation. Set `PUBLIC_APP_URL` to the public HTTPS origin before enabling SMTP in production; the app does not build receipt links from untrusted request host headers. Delivery failures or missing production link configuration are recorded in the audit log but do not invalidate the entry.
 
 Turnstile is disabled unless `TURNSTILE_SECRET_KEY` is set. Set both the public site key and secret key to show and verify the widget on public entry forms. Keep `TRUST_PROXY_HEADERS=false` unless a trusted proxy controls forwarded IP headers.
 
@@ -155,8 +155,9 @@ After upgrade, verify:
 - campaign lists load,
 - public campaign pages load,
 - public entry and ticket lookup still work on a test campaign, including reference-required lookup if enabled, and
-- recent audit logs and completed draw records are still present, and
-- new completed draws expose `/campaigns/[slug]/verify/bundle.json` and pass `npm run verify:draw -- bundle.json`.
+- recent audit logs and completed draw records are still present,
+- new completed draws expose `/campaigns/[slug]/verify/bundle.json` and pass `npm run verify:draw -- bundle.json`, and
+- downloaded verification bundles use public entry keys and prize keys, not database IDs.
 
 ## Troubleshooting
 
@@ -174,6 +175,7 @@ docker compose -f docker-compose.prod.yml logs app
 - Restore failure: use only files directly inside `backups/` with the `prod-YYYYMMDD-HHMMSS.db` naming pattern, and include `--confirm`.
 - Public rate limits not behaving as expected: set `TRUST_PROXY_HEADERS=true` only behind a trusted reverse proxy; otherwise the app intentionally ignores forwarded IP headers.
 - Ticket receipts not sending: confirm `SMTP_HOST`, `SMTP_FROM`, credentials, and provider firewall settings. Entries still succeed when receipt delivery fails.
+- Ticket receipts missing lookup links in production: set `PUBLIC_APP_URL` to the public HTTPS origin and retry with a new public entry.
 - Turnstile challenge failing: confirm both Turnstile env vars are set and the browser can load `https://challenges.cloudflare.com`.
 
 ## Before Accepting Public Entries

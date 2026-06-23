@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { notFound } from "next/navigation";
-import { buildDrawVerificationBundle } from "@/lib/draw-verification";
+import { buildDrawVerificationBundle, isStoredDrawManifestEntries } from "@/lib/draw-verification";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -33,10 +33,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   }
 
   const entries = JSON.parse(draw.entryManifestJson);
+  if (!isStoredDrawManifestEntries(entries)) {
+    notFound();
+  }
+
   const bundle = buildDrawVerificationBundle({
     campaign,
     draw: {
-      id: draw.id,
       createdAt: draw.createdAt,
       seed: draw.seed,
       seedHash: draw.seedHash,

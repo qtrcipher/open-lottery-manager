@@ -24,4 +24,4 @@ Admin login, public entry, and ticket lookup forms include SQLite-backed rate-li
 
 Campaign admins can require an entry reference for public entry and ticket lookup when email-only lookup is not strong enough for the campaign.
 
-Public entries may be flagged for admin review by basic risk checks. Flagged and rejected entries are excluded from draws until an admin explicitly approves them. Completed draws publish privacy-safe verification bundles using ticket codes, not participant names or emails.
+Public entries may be flagged for admin review by basic risk checks. Flagged and rejected entries are excluded from draws until an admin explicitly approves them. Completed draws publish privacy-safe verification bundles using public entry keys, public prize keys, and ticket codes, not participant names, emails, or database IDs.

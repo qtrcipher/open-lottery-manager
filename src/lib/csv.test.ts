@@ -116,4 +116,16 @@ describe("serializeCsv", () => {
 
     expect(csv).toBe("name,email\n,\n");
   });
+
+  it("neutralizes spreadsheet formula cells", () => {
+    const csv = serializeCsv(["name", "reference", "quantity"], [
+      {
+        name: "=HYPERLINK(\"https://example.com\")",
+        reference: "  @SUM(1,2)",
+        quantity: -1
+      }
+    ]);
+
+    expect(csv).toBe('name,reference,quantity\n"\'=HYPERLINK(""https://example.com"")","\'  @SUM(1,2)",-1\n');
+  });
 });
