@@ -60,7 +60,21 @@ export default async function AdminDashboard({
       }
     })
   ]);
+  const [totalCampaignCount, activeCampaignCount, totalEntryCount, totalWinnerCount, totalAuditCount] = await Promise.all([
+    prisma.campaign.count(),
+    prisma.campaign.count({ where: { status: { not: "ARCHIVED" } } }),
+    prisma.entry.count(),
+    prisma.drawWinner.count(),
+    prisma.auditLog.count()
+  ]);
   const health = createHealthPayload({ databaseStatus });
+  const dashboardMetrics = [
+    { label: "Total campaigns", value: totalCampaignCount },
+    { label: "Active campaigns", value: activeCampaignCount },
+    { label: "Entries", value: totalEntryCount },
+    { label: "Winners", value: totalWinnerCount },
+    { label: "Audit events", value: totalAuditCount }
+  ];
   const exportCounts = {
     entries: entryExportCount,
     winners: winnerExportCount,
@@ -82,6 +96,15 @@ export default async function AdminDashboard({
           New campaign
         </ButtonLink>
       </header>
+
+      <dl className="mb-5 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
+        {dashboardMetrics.map((metric) => (
+          <div key={metric.label} className="rounded-lg border border-line bg-white/82 p-4 shadow-soft">
+            <dt className="font-semibold text-ink/70">{metric.label}</dt>
+            <dd className="mt-2 text-3xl font-bold text-ink">{metric.value.toLocaleString()}</dd>
+          </div>
+        ))}
+      </dl>
 
       <Panel className="mb-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
