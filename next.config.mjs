@@ -6,11 +6,12 @@ const __dirname = path.dirname(__filename);
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: http: https:",
-  "connect-src 'self'",
+  "connect-src 'self' https://challenges.cloudflare.com",
   "font-src 'self' data:",
+  "frame-src https://challenges.cloudflare.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

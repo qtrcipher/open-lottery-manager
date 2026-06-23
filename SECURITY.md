@@ -20,6 +20,8 @@ Avoid sending live secrets, real participant data, raw production databases, or 
 
 Open Lottery Manager is self-hosted software. Operators are responsible for deployment hardening, HTTPS, backups, access control, legal compliance, and monitoring. The app does not provide KYC, geolocation, payment processing, responsible gaming controls, tax reporting, or regulatory certification.
 
-Admin login, public entry, and ticket lookup forms include SQLite-backed rate-limit controls. Public entry and lookup forms also include basic honeypot controls. By default, the app ignores forwarded IP headers; set `TRUST_PROXY_HEADERS=true` only behind a trusted reverse proxy or WAF that controls `x-forwarded-for`, `x-real-ip`, or `cf-connecting-ip`.
+Admin login, public entry, and ticket lookup forms include SQLite-backed rate-limit controls. Public entry and lookup forms also include basic honeypot controls. Public entry forms can additionally use Cloudflare Turnstile when configured. By default, the app ignores forwarded IP headers; set `TRUST_PROXY_HEADERS=true` only behind a trusted reverse proxy or WAF that controls `x-forwarded-for`, `x-real-ip`, or `cf-connecting-ip`.
 
 Campaign admins can require an entry reference for public entry and ticket lookup when email-only lookup is not strong enough for the campaign.
+
+Public entries may be flagged for admin review by basic risk checks. Flagged and rejected entries are excluded from draws until an admin explicitly approves them. Completed draws publish privacy-safe verification bundles using ticket codes, not participant names or emails.

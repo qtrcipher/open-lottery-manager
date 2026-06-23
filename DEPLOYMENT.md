@@ -24,6 +24,8 @@ Edit `.env` before starting:
 - `ADMIN_PASSWORD_HASH`: the generated password hash.
 - `PUBLIC_APP_URL`: optional public HTTPS URL shown in admin system status.
 - `TRUST_PROXY_HEADERS`: set to `true` only when a trusted proxy controls `x-forwarded-for`, `x-real-ip`, or `cf-connecting-ip`.
+- SMTP variables: optional ticket receipt email settings. Leave empty to disable email.
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`: optional Cloudflare Turnstile challenge for public entries.
 
 Start the app:
 
@@ -116,7 +118,13 @@ Public entry, ticket lookup, and admin login rate limits ignore forwarded IP hea
 
 Reverse proxies and load balancers can use `/api/health` for readiness checks. The endpoint is unauthenticated and intentionally exposes only basic status, version, timestamp, and database connectivity.
 
-The app emits baseline browser security headers on every route, including Content Security Policy, frame blocking, content-type sniffing protection, referrer policy, permissions policy, and production HSTS. Preserve these headers at the reverse proxy unless you intentionally replace them with an equivalent or stricter policy. The default CSP keeps inline script/style support for Next.js rendering but does not allow `unsafe-eval`. If you customize the policy, retest admin pages, public entry forms, ticket lookup, exports, and operator logo URLs.
+The app emits baseline browser security headers on every route, including Content Security Policy, frame blocking, content-type sniffing protection, referrer policy, permissions policy, and production HSTS. Preserve these headers at the reverse proxy unless you intentionally replace them with an equivalent or stricter policy. The default CSP keeps inline script/style support for Next.js rendering, allows Cloudflare Turnstile challenge origins, and does not allow `unsafe-eval`. If you customize the policy, retest admin pages, public entry forms, ticket lookup, exports, Turnstile, and operator logo URLs.
+
+## Optional Email And Turnstile
+
+The app does not send email unless SMTP is configured. When SMTP is configured, public entry ticket receipts are sent after successful entry creation. Delivery failures are recorded in the audit log but do not invalidate the entry.
+
+Turnstile is disabled unless `TURNSTILE_SECRET_KEY` is set. Set both the public site key and secret key to show and verify the widget on public entry forms. Keep `TRUST_PROXY_HEADERS=false` unless a trusted proxy controls forwarded IP headers.
 
 ## Upgrade Workflow
 
@@ -147,7 +155,8 @@ After upgrade, verify:
 - campaign lists load,
 - public campaign pages load,
 - public entry and ticket lookup still work on a test campaign, including reference-required lookup if enabled, and
-- recent audit logs and completed draw records are still present.
+- recent audit logs and completed draw records are still present, and
+- new completed draws expose `/campaigns/[slug]/verify/bundle.json` and pass `npm run verify:draw -- bundle.json`.
 
 ## Troubleshooting
 
@@ -164,8 +173,8 @@ docker compose -f docker-compose.prod.yml logs app
 - Backup failure: confirm Docker is running, the production Compose project can stop/start the `app` service, and `/app/data/prod.db` exists before running `npm run backup`.
 - Restore failure: use only files directly inside `backups/` with the `prod-YYYYMMDD-HHMMSS.db` naming pattern, and include `--confirm`.
 - Public rate limits not behaving as expected: set `TRUST_PROXY_HEADERS=true` only behind a trusted reverse proxy; otherwise the app intentionally ignores forwarded IP headers.
-
-The app does not send email by default. If an operator adds SMTP or transactional email later, document and test those settings separately.
+- Ticket receipts not sending: confirm `SMTP_HOST`, `SMTP_FROM`, credentials, and provider firewall settings. Entries still succeed when receipt delivery fails.
+- Turnstile challenge failing: confirm both Turnstile env vars are set and the browser can load `https://challenges.cloudflare.com`.
 
 ## Before Accepting Public Entries
 

@@ -1,6 +1,8 @@
 # Open Lottery Manager
 
 [![CI](https://github.com/qtrcipher/open-lottery-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/qtrcipher/open-lottery-manager/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/qtrcipher/open-lottery-manager/actions/workflows/codeql.yml/badge.svg)](https://github.com/qtrcipher/open-lottery-manager/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://github.com/qtrcipher/open-lottery-manager/actions/workflows/scorecard.yml/badge.svg)](https://github.com/qtrcipher/open-lottery-manager/actions/workflows/scorecard.yml)
 [![Latest Release](https://img.shields.io/github/v/release/qtrcipher/open-lottery-manager?label=release)](https://github.com/qtrcipher/open-lottery-manager/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -10,11 +12,11 @@ This project is software only. Operators are responsible for complying with all 
 
 ## At A Glance
 
-- Public campaign pages with rules, prizes, entry status, ticket lookup, and draw records.
-- Admin tools for campaigns, participants, prizes, CSV import/export, audit logs, branding, and operations links.
-- Auditable draws with seed hashes, algorithm version, ordered winners, and export-friendly records.
+- Public campaign pages with structured disclosures, rules, prizes, entry status, ticket lookup, and draw records.
+- Admin tools for campaigns, participants, participant review, prizes, CSV import/export, audit logs, branding, and operations links.
+- Auditable draws with revealed seeds, frozen entry manifests, verification bundles, algorithm version, ordered winners, and export-friendly records.
 - Self-hosting support with Docker Compose, SQLite persistence, backup/restore helpers, runtime health checks, proxy-aware rate limits, and smoke tests.
-- GitHub Actions for tests, lint, build, Docker validation, dependency audit, release validation, and E2E smoke checks.
+- GitHub Actions for tests, lint, build, Docker validation, dependency audit, CodeQL, Scorecard, release validation, and E2E smoke checks.
 
 ## Screenshots
 
@@ -43,8 +45,10 @@ This project is software only. Operators are responsible for complying with all 
 - Campaign setup with public rules, dates, and status.
 - Fixed prize lists with one or more winners.
 - Public participant entry forms, manual entry creation, and CSV import.
-- Auditable draws using server-side cryptographic randomness.
-- Public results pages with seed hashes and algorithm version.
+- Public entry abuse controls with rate limits, honeypots, optional Turnstile, and admin review status.
+- Optional SMTP ticket receipts for public entries.
+- Auditable draws using server-side cryptographic randomness, frozen manifests, revealed seeds, and offline replay.
+- Public results pages with seed hashes, manifest hashes, bundle hashes, and algorithm version.
 - Operator branding settings for name, tagline, support email, logo URL, and primary color.
 - Single-admin authentication for small self-hosted deployments.
 - SQLite persistence through Prisma.
@@ -90,6 +94,8 @@ Update `.env` with:
 - `ADMIN_EMAIL`: the admin login email.
 - `ADMIN_PASSWORD_HASH`: the generated password hash.
 
+Optional settings include SMTP receipt variables and Cloudflare Turnstile keys from `.env.example`.
+
 Then start the app with the production template:
 
 ```bash
@@ -108,6 +114,8 @@ For production setup, backups, reverse proxy notes, upgrades, and troubleshootin
 - Put the app behind HTTPS and a trusted reverse proxy. Set `TRUST_PROXY_HEADERS=true` only when your proxy controls forwarded IP headers.
 - Set a real `ADMIN_EMAIL`, configure support details in `/admin/settings`, and replace demo rules before publishing campaigns.
 - Verify runtime health with `/api/health` after deployment.
+- Configure SMTP only if you want ticket receipt emails; entries remain valid when email is not configured.
+- Configure Turnstile only if you want a public-entry challenge; keep rate limits and honeypots enabled either way.
 - Confirm legal, tax, age, prize, advertising, and licensing requirements before accepting public entries.
 - Keep dependencies updated and review `SECURITY.md` before reporting vulnerabilities.
 - Review [RUNBOOK.md](RUNBOOK.md) before launch, before draws, after draws, and during backup/restore drills.
@@ -132,6 +140,10 @@ Participants can revisit `/campaigns/[slug]/lookup` to find their ticket code wi
 
 Public entry, ticket lookup, and admin login forms include basic abuse protection with SQLite-backed rate limits. Public forms also include hidden honeypot fields. By default, the app does not trust forwarded IP headers; set `TRUST_PROXY_HEADERS=true` only behind a controlled proxy, WAF, or platform that strips client-supplied forwarding headers.
 
+Operators can optionally configure Cloudflare Turnstile with `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`. Public entries from disposable email domains are flagged for admin review. Flagged or rejected entries are excluded from draws until an admin approves them.
+
+Operators can optionally configure SMTP with `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, and related credentials. Ticket receipts are best-effort: delivery failures are logged for admins but do not reject a participant entry.
+
 ## CSV Export
 
 Campaign admins can download CSV records from the campaign management page:
@@ -150,9 +162,15 @@ Delete is only available for draft campaigns with no completed draw. The admin m
 
 ## Draw Record
 
-Completed public campaigns include a draw record page at `/campaigns/[slug]/verify`. It shows the recorded seed hash, algorithm version, draw timestamp, entry counts, winner count, and ordered winners for participant inspection.
+Completed public campaigns include a draw record page at `/campaigns/[slug]/verify`. It shows the revealed seed, seed hash, frozen entry manifest hash, verification bundle hash, algorithm version, draw timestamp, entry counts, winner count, and ordered winners for participant inspection.
 
-The draw record page is not an independent recomputation of the draw. It does not expose the raw draw seed and does not replace legal, regulatory, or independent audit requirements.
+Download `/campaigns/[slug]/verify/bundle.json` and replay it locally:
+
+```bash
+npm run verify:draw -- bundle.json
+```
+
+Legacy draws created before verification bundles remain visible but cannot be replayed from a frozen manifest. Draw verification does not replace legal, regulatory, or independent audit requirements.
 
 ## Branding Settings
 
@@ -182,3 +200,4 @@ For maintainer release steps, see [docs/RELEASING.md](docs/RELEASING.md).
 - `npm run smoke:deploy -- http://localhost:3000`: verify a deployed app and database health check.
 - `npm run smoke:e2e -- http://localhost:3000`: verify core public, admin login, health, and optional demo campaign pages on a running app.
 - `npm run screenshots`: capture README screenshots from a running local app.
+- `npm run verify:draw -- bundle.json`: replay a public draw verification bundle.
