@@ -55,6 +55,18 @@ curl http://localhost:3000/api/health
 
 The endpoint returns JSON with app status, package version, uptime, configured public URL, timestamp, and database connectivity. A healthy response uses HTTP `200`; a database connectivity failure uses HTTP `503`.
 
+Check core pages with the E2E smoke test:
+
+```bash
+npm run smoke:e2e -- http://localhost:3000
+```
+
+If demo data is loaded with `npm run db:seed`, require the demo campaign pages too:
+
+```bash
+npm run smoke:e2e -- http://localhost:3000 --require-demo
+```
+
 ## Data Persistence
 
 Campaign, entry, prize, draw, audit, settings, and rate-limit records are stored in SQLite at `/app/data/prod.db` inside the container. Docker Compose persists `/app/data` in the named volume declared as `lottery-data`.
@@ -129,6 +141,7 @@ After upgrade, verify:
 
 - `docker compose -f docker-compose.prod.yml ps` shows the app service as healthy,
 - `npm run smoke:deploy -- http://localhost:3000` passes,
+- `npm run smoke:e2e -- http://localhost:3000` passes,
 - admin login works,
 - campaign lists load,
 - public campaign pages load,
@@ -163,6 +176,7 @@ The app does not send email by default. If an operator adds SMTP or transactiona
 - Confirm HTTPS and trusted proxy headers.
 - Confirm `docker compose -f docker-compose.prod.yml ps` shows the app service as healthy.
 - Confirm `npm run smoke:deploy -- http://localhost:3000` passes.
+- Confirm `npm run smoke:e2e -- http://localhost:3000` passes.
 - Run a test campaign and draw before using real participant data.
 
 Use [RUNBOOK.md](RUNBOOK.md) for launch, live-campaign, pre-draw, post-draw, backup drill, and incident checklists.

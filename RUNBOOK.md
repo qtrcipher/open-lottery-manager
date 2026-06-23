@@ -9,7 +9,7 @@ This runbook is operational guidance for self-hosted Open Lottery Manager deploy
 - Put the app behind HTTPS and a trusted reverse proxy. Only trusted infrastructure should set forwarded IP headers.
 - Configure `/admin/settings` with the public operator name, tagline, support email, logo, and brand color.
 - Replace demo rules with operator-approved campaign rules, eligibility terms, dates, and prize descriptions.
-- Run a test campaign, public entry, ticket lookup, draw, export, backup, restore drill, and `npm run smoke:deploy -- http://localhost:3000`.
+- Run a test campaign, public entry, ticket lookup, draw, export, backup, restore drill, `npm run smoke:deploy -- http://localhost:3000`, and `npm run smoke:e2e -- http://localhost:3000`.
 
 ## During Campaign
 
@@ -40,7 +40,7 @@ This runbook is operational guidance for self-hosted Open Lottery Manager deploy
 - Run `npm run backup` from the host repository directory.
 - Confirm a non-empty `backups/prod-YYYYMMDD-HHMMSS.db` file exists.
 - Test restore steps on a copy or non-production environment with `npm run restore -- backups/prod-YYYYMMDD-HHMMSS.db --confirm`.
-- Start the app and run `npm run smoke:deploy -- http://localhost:3000`.
+- Start the app and run `npm run smoke:deploy -- http://localhost:3000` and `npm run smoke:e2e -- http://localhost:3000`.
 - Confirm admin login, campaign lists, public pages, recent audit logs, and completed draw records still load.
 
 ## Incident Checklist

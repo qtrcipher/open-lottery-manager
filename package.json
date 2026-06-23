@@ -18,6 +18,7 @@
     "restore": "node scripts/restore-sqlite.mjs",
     "hash-password": "node scripts/hash-password.mjs",
     "smoke:deploy": "node scripts/smoke-deploy.mjs",
+    "smoke:e2e": "node scripts/smoke-e2e.mjs",
     "screenshots": "node scripts/capture-screenshots.mjs",
     "release:prepare": "node scripts/prepare-release.mjs",
     "release:prepare:dry-run": "node scripts/prepare-release.mjs --dry-run"

@@ -170,4 +170,5 @@ For maintainer release steps, see [docs/RELEASING.md](docs/RELEASING.md).
 - `npm run restore -- backups/prod-YYYYMMDD-HHMMSS.db --confirm`: restore a production SQLite backup.
 - `npm run hash-password -- "password"`: generate an admin password hash.
 - `npm run smoke:deploy -- http://localhost:3000`: verify a deployed app and database health check.
+- `npm run smoke:e2e -- http://localhost:3000`: verify core public, admin login, health, and optional demo campaign pages on a running app.
 - `npm run screenshots`: capture README screenshots from a running local app.
