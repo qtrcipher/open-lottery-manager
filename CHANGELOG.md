@@ -2,6 +2,22 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.12 - 2026-06-23
+
+Operator runbook documentation.
+
+### Added
+
+- Operator runbook with launch, live-campaign, pre-draw, post-draw, backup drill, and incident checklists.
+
+### Changed
+
+- README and deployment guide now link to the operator runbook from production operations sections.
+
+### Operations
+
+- Operators can follow a single checklist for campaign operations and backup/restore drills.
+
 ## v0.1.11 - 2026-06-23
 
 Admin dashboard metrics overview.
