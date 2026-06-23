@@ -33,7 +33,7 @@
     "prisma": "^6.10.1",
     "react": "19.2.7",
     "react-dom": "19.2.7",
-    "zod": "^3.25.67"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
