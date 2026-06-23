@@ -43,6 +43,10 @@ export default async function NewCampaignPage() {
               <input name="allowPublicEntries" type="checkbox" className="h-4 w-4" />
               Accept public entries
             </label>
+            <label className="flex items-center gap-3 text-sm font-semibold">
+              <input name="requireLookupReference" type="checkbox" className="h-4 w-4" />
+              Require reference for public entry and ticket lookup
+            </label>
             <SubmitButton>Create campaign</SubmitButton>
           </form>
         </Panel>

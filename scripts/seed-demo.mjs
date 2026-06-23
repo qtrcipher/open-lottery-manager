@@ -100,6 +100,7 @@ async function main() {
       endsAt: new Date("2026-07-31T18:00:00.000Z"),
       isPublic: true,
       allowPublicEntries: false,
+      requireLookupReference: true,
       prizes: {
         create: [
           {

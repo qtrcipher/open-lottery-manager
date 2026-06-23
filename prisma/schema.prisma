@@ -26,6 +26,7 @@ model Campaign {
   endsAt      DateTime?
   isPublic           Boolean        @default(false)
   allowPublicEntries Boolean        @default(false)
+  requireLookupReference Boolean        @default(false)
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   prizes             Prize[]

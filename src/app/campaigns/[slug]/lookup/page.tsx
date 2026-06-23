@@ -40,7 +40,7 @@ export default async function TicketLookupPage({
     getAppSettings(),
     prisma.campaign.findFirst({
       where: { slug: resolvedParams.slug, isPublic: true, status: { not: "ARCHIVED" } },
-      select: { id: true, slug: true, title: true }
+      select: { id: true, slug: true, title: true, requireLookupReference: true }
     })
   ]);
 
@@ -83,7 +83,9 @@ export default async function TicketLookupPage({
             <Search size={20} aria-hidden="true" />
             <h2 className="text-xl font-semibold">Find my ticket</h2>
           </div>
-          <p className="mt-2 text-sm leading-6 text-ink/68">Use the same email used for entry. Add the reference if the operator provided one.</p>
+          <p className="mt-2 text-sm leading-6 text-ink/68">
+            Use the same email used for entry. {campaign.requireLookupReference ? "This campaign requires the entry reference for lookup." : "Add the reference if the operator provided one."}
+          </p>
           <form action={lookupTicketAction} className="mt-4 space-y-4">
             <input name="slug" type="hidden" value={campaign.slug} />
             <div className="hp-field" aria-hidden="true">
@@ -96,7 +98,7 @@ export default async function TicketLookupPage({
             </div>
             <div>
               <Label>Reference</Label>
-              <TextInput name="reference" maxLength={120} placeholder="Optional" />
+              <TextInput name="reference" maxLength={120} required={campaign.requireLookupReference} placeholder={campaign.requireLookupReference ? "Required" : "Optional"} />
             </div>
             <SubmitButton>Look up ticket</SubmitButton>
           </form>
@@ -132,7 +134,7 @@ export default async function TicketLookupPage({
             </div>
           ) : (
             <div className="mt-4 rounded-md border border-line bg-paper/70 p-4 text-sm leading-6 text-ink/70">
-              Enter the email used for your campaign entry. If the operator gave you a reference, include it to narrow the lookup.
+              Enter the email used for your campaign entry. {campaign.requireLookupReference ? "This campaign also requires your reference." : "If the operator gave you a reference, include it to narrow the lookup."}
             </div>
           )}
         </Panel>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appSettingsSchema, entryUpdateSchema, prizeUpdateSchema, ticketLookupSchema } from "./validators";
+import { appSettingsSchema, campaignSchema, entryUpdateSchema, prizeUpdateSchema, ticketLookupSchema } from "./validators";
 
 describe("appSettingsSchema", () => {
   it("normalizes optional empty fields to null", () => {
@@ -77,6 +77,23 @@ describe("ticketLookupSchema", () => {
   });
 });
 
+describe("campaignSchema", () => {
+  it("accepts stronger lookup reference policy", () => {
+    const parsed = campaignSchema.parse({
+      title: "Customer Rewards",
+      description: "Rewards campaign.",
+      rules: "Terms apply.",
+      startsAt: "",
+      endsAt: "",
+      isPublic: true,
+      allowPublicEntries: true,
+      requireLookupReference: true
+    });
+
+    expect(parsed.requireLookupReference).toBe(true);
+  });
+});
+
 describe("prizeUpdateSchema", () => {
   it("normalizes prize updates", () => {
     const parsed = prizeUpdateSchema.parse({
@@ -109,15 +126,15 @@ describe("prizeUpdateSchema", () => {
 describe("entryUpdateSchema", () => {
   it("normalizes participant updates", () => {
     const parsed = entryUpdateSchema.parse({
-      name: "  Fatima Noor  ",
-      email: " FATIMA@example.COM ",
+      name: "  Jordan Lee  ",
+      email: " JORDAN@example.COM ",
       reference: "",
       isEligible: false
     });
 
     expect(parsed).toEqual({
-      name: "Fatima Noor",
-      email: "fatima@example.com",
+      name: "Jordan Lee",
+      email: "jordan@example.com",
       reference: null,
       isEligible: false
     });

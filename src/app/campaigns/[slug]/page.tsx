@@ -183,7 +183,9 @@ export default async function CampaignPage({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold">Enter campaign</h2>
-              <p className="mt-2 text-sm leading-6 text-ink/68">Submit one entry with your name and email. Keep your ticket code after entry.</p>
+              <p className="mt-2 text-sm leading-6 text-ink/68">
+                Submit one entry with your name, email, and {campaign.requireLookupReference ? "required reference" : "optional reference"}. Keep your ticket code after entry.
+              </p>
             </div>
             <span className="rounded-full border border-line bg-paper px-3 py-1 text-xs font-semibold text-ink/64">{entryStatusMessage}</span>
           </div>
@@ -215,7 +217,7 @@ export default async function CampaignPage({
                 </div>
                 <div>
                   <Label>Reference</Label>
-                  <TextInput name="reference" maxLength={120} placeholder="Optional" />
+                  <TextInput name="reference" maxLength={120} required={campaign.requireLookupReference} placeholder={campaign.requireLookupReference ? "Required" : "Optional"} />
                 </div>
                 <SubmitButton>Enter</SubmitButton>
               </form>
@@ -262,6 +264,7 @@ export default async function CampaignPage({
                 <Link className="brand-text" href={`/campaigns/${campaign.slug}/lookup`}>
                   Find my ticket
                 </Link>
+                <span className="mt-1 block text-xs font-normal text-ink/58">{campaign.requireLookupReference ? "Reference required" : "Reference optional"}</span>
               </dd>
             </div>
           </dl>

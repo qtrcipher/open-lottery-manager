@@ -188,7 +188,8 @@ export async function createCampaignAction(formData: FormData) {
     startsAt: formString(formData, "startsAt"),
     endsAt: formString(formData, "endsAt"),
     isPublic: formData.get("isPublic") === "on",
-    allowPublicEntries: formData.get("allowPublicEntries") === "on"
+    allowPublicEntries: formData.get("allowPublicEntries") === "on",
+    requireLookupReference: formData.get("requireLookupReference") === "on"
   });
 
   const baseSlug = slugify(parsed.title) || `campaign-${Date.now()}`;
@@ -202,6 +203,7 @@ export async function createCampaignAction(formData: FormData) {
       endsAt: optionalDate(parsed.endsAt),
       isPublic: parsed.isPublic,
       allowPublicEntries: parsed.isPublic && parsed.allowPublicEntries,
+      requireLookupReference: parsed.requireLookupReference,
       status: parsed.isPublic ? "OPEN" : "DRAFT"
     }
   }).catch(async (error) => {
@@ -219,6 +221,7 @@ export async function createCampaignAction(formData: FormData) {
         endsAt: optionalDate(parsed.endsAt),
         isPublic: parsed.isPublic,
         allowPublicEntries: parsed.isPublic && parsed.allowPublicEntries,
+        requireLookupReference: parsed.requireLookupReference,
         status: parsed.isPublic ? "OPEN" : "DRAFT"
       }
     });
@@ -239,7 +242,8 @@ export async function updateCampaignAction(formData: FormData) {
     startsAt: formString(formData, "startsAt"),
     endsAt: formString(formData, "endsAt"),
     isPublic: formData.get("isPublic") === "on",
-    allowPublicEntries: formData.get("allowPublicEntries") === "on"
+    allowPublicEntries: formData.get("allowPublicEntries") === "on",
+    requireLookupReference: formData.get("requireLookupReference") === "on"
   });
 
   const existing = await prisma.campaign.findUniqueOrThrow({
@@ -260,6 +264,7 @@ export async function updateCampaignAction(formData: FormData) {
       endsAt: optionalDate(parsed.endsAt),
       isPublic: parsed.isPublic,
       allowPublicEntries: parsed.isPublic && parsed.allowPublicEntries,
+      requireLookupReference: parsed.requireLookupReference,
       status: parsed.isPublic ? "OPEN" : "DRAFT"
     }
   });

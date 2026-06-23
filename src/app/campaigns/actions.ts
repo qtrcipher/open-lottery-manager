@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { canAcceptPublicEntries, type CampaignStatusValue } from "@/lib/campaign-lifecycle";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit, getClientIpFromHeaders, isHoneypotFilled } from "@/lib/rate-limit";
+import { checkRateLimit, isHoneypotFilled, rateLimitSubjectFromHeaders } from "@/lib/rate-limit";
 import { createTicketCode } from "@/lib/tickets";
 import { publicEntrySchema, ticketLookupSchema } from "@/lib/validators";
 
@@ -92,7 +92,7 @@ export async function createPublicEntryAction(formData: FormData) {
   const requestHeaders = await headers();
   const entryRateLimit = await checkRateLimit({
     action: "public_entry",
-    subject: `${slug}:${getClientIpFromHeaders(requestHeaders)}`,
+    subject: `${slug}:${rateLimitSubjectFromHeaders(requestHeaders)}`,
     ...publicEntryRateLimit
   });
 
@@ -118,6 +118,7 @@ export async function createPublicEntryAction(formData: FormData) {
       status: true,
       isPublic: true,
       allowPublicEntries: true,
+      requireLookupReference: true,
       startsAt: true,
       endsAt: true,
       _count: { select: { draws: true } }
@@ -139,6 +140,10 @@ export async function createPublicEntryAction(formData: FormData) {
     })
   ) {
     redirectToCampaign(campaign.slug, { entry: "closed" });
+  }
+
+  if (campaign.requireLookupReference && !parsed.data.reference) {
+    redirectToCampaign(campaign.slug, { entry: "invalid" });
   }
 
   let entry;
@@ -184,7 +189,7 @@ export async function lookupTicketAction(formData: FormData) {
   const requestHeaders = await headers();
   const lookupRateLimit = await checkRateLimit({
     action: "ticket_lookup",
-    subject: `${slug}:${getClientIpFromHeaders(requestHeaders)}`,
+    subject: `${slug}:${rateLimitSubjectFromHeaders(requestHeaders)}`,
     ...ticketLookupRateLimit
   });
 
@@ -203,11 +208,15 @@ export async function lookupTicketAction(formData: FormData) {
 
   const campaign = await prisma.campaign.findFirst({
     where: { slug, isPublic: true, status: { not: "ARCHIVED" } },
-    select: { id: true, slug: true }
+    select: { id: true, slug: true, requireLookupReference: true }
   });
 
   if (!campaign) {
     redirectToLookup(slug, { status: "not-found" });
+  }
+
+  if (campaign.requireLookupReference && !parsed.data.reference) {
+    redirectToLookup(campaign.slug, { status: "not-found" });
   }
 
   const entry = await prisma.entry.findFirst({

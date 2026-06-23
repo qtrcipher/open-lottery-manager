@@ -49,7 +49,8 @@ export const campaignSchema = z.object({
   startsAt: z.string().optional(),
   endsAt: z.string().optional(),
   isPublic: z.boolean().default(false),
-  allowPublicEntries: z.boolean().default(false)
+  allowPublicEntries: z.boolean().default(false),
+  requireLookupReference: z.boolean().default(false)
 });
 
 export const prizeSchema = z.object({

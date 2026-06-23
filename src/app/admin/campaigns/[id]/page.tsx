@@ -258,6 +258,10 @@ export default async function CampaignAdminPage({
                 <h3 className="font-semibold text-ink">Public entries</h3>
                 <p>{campaign.allowPublicEntries ? "Enabled" : "Disabled"}</p>
               </div>
+              <div>
+                <h3 className="font-semibold text-ink">Lookup reference</h3>
+                <p>{campaign.requireLookupReference ? "Required" : "Optional"}</p>
+              </div>
             </div>
           ) : (
             <form action={updateCampaignAction} className="mt-5 space-y-5">
@@ -291,6 +295,10 @@ export default async function CampaignAdminPage({
               <label className="flex items-center gap-3 text-sm font-semibold">
                 <input name="allowPublicEntries" type="checkbox" className="h-4 w-4" defaultChecked={campaign.allowPublicEntries} />
                 Accept public entries
+              </label>
+              <label className="flex items-center gap-3 text-sm font-semibold">
+                <input name="requireLookupReference" type="checkbox" className="h-4 w-4" defaultChecked={campaign.requireLookupReference} />
+                Require reference for public entry and ticket lookup
               </label>
               <SubmitButton>Save settings</SubmitButton>
             </form>
