@@ -2,6 +2,27 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.20 - 2026-06-23
+
+Public trust and verification polish
+
+### Added
+
+- Public draw verification bundles with frozen eligible-entry manifests, revealed seeds, manifest hashes, bundle hashes, and an offline `npm run verify:draw` replay script.
+- Structured campaign disclosure fields for timezone, scheduled draw, sponsor, eligibility, prize value, and jurisdiction notices.
+- Optional SMTP ticket receipts for public entries, optional Cloudflare Turnstile verification, and participant review status controls.
+
+### Changed
+
+- Public draw records now expose enough data for independent replay on new draws while keeping names and emails out of verification bundles.
+- Draw selection now excludes flagged or rejected participants until an admin approves them.
+- Public campaign pages, admin campaign forms, README, deployment docs, and security docs now reflect verification, disclosure, email, Turnstile, and review workflows.
+
+### Operations
+
+- Added Dependabot, CodeQL, OpenSSF Scorecard, and a project code of conduct.
+- Updated environment examples and Content Security Policy for optional SMTP and Turnstile deployments.
+
 ## v0.1.19 - 2026-06-23
 
 Security and operations hardening

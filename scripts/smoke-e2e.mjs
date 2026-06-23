@@ -78,7 +78,7 @@ async function expectText(page, text) {
 
 async function checkPage(page, baseUrl, path, expectedTexts) {
   const targetUrl = appUrl(baseUrl, path);
-  const response = await page.goto(targetUrl, { waitUntil: "networkidle", timeout: timeoutMs });
+  const response = await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
   const status = response?.status();
 
   if (status !== 200) {
@@ -95,7 +95,7 @@ async function checkPage(page, baseUrl, path, expectedTexts) {
 async function checkDemoPages(page, baseUrl) {
   const campaignPath = "/campaigns/demo-summer-rewards";
   const campaignUrl = appUrl(baseUrl, campaignPath);
-  const response = await page.goto(campaignUrl, { waitUntil: "networkidle", timeout: timeoutMs });
+  const response = await page.goto(campaignUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
   const status = response?.status();
 
   if (status === 404 && !requireDemo) {
