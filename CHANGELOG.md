@@ -2,6 +2,22 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.18 - 2026-06-23
+
+Main CI E2E smoke check.
+
+### Added
+
+- CI workflow now runs the Playwright E2E smoke check for pushes to main.
+
+### Changed
+
+- Main-branch CI now seeds demo data, starts the built app, and requires demo campaign, ticket lookup, and draw record pages to render.
+
+### Operations
+
+- Pull requests keep faster checks while main pushes gain page-rendering validation before release prep.
+
 ## v0.1.17 - 2026-06-23
 
 Release validation E2E smoke.
