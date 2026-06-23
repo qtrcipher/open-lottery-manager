@@ -2,6 +2,22 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.11 - 2026-06-23
+
+Admin dashboard metrics overview.
+
+### Added
+
+- Admin dashboard metrics row for total campaigns, active campaigns, entries, winners, and audit events.
+
+### Changed
+
+- Admin dashboard now surfaces global operational totals before status and operations panels.
+
+### Operations
+
+- Operators can quickly scan campaign and record volume from the dashboard.
+
 ## v0.1.10 - 2026-06-23
 
 Admin activity, export count, and operations documentation improvements.
