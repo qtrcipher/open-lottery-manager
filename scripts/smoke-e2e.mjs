@@ -107,7 +107,7 @@ async function checkDemoPages(page, baseUrl) {
     fail(`expected HTTP 200 from ${campaignUrl}, received ${status ?? "no response"}.`);
   }
 
-  for (const text of ["Demo Summer Rewards Draw", "Draw record", "Find my ticket", "Draw completed"]) {
+  for (const text of ["Demo Customer Rewards Draw", "Draw record", "Find my ticket", "Draw completed"]) {
     await expectText(page, text);
   }
   console.log(`Page check passed: ${campaignUrl}`);

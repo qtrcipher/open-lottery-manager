@@ -8,18 +8,18 @@ const algorithmVersion = "olm-random-shuffle-v1";
 const appSettingsId = "app";
 
 const entries = [
-  ["Amina Hassan", "amina@example.com", "DEMO-1001"],
-  ["Omar Ali", "omar@example.com", "DEMO-1002"],
-  ["Fatima Noor", "fatima@example.com", "DEMO-1003"],
-  ["Yousef Rahman", "yousef@example.com", "DEMO-1004"],
-  ["Layla Karim", "layla@example.com", "DEMO-1005"],
-  ["Noura Saleh", "noura@example.com", "DEMO-1006"],
-  ["Hamad Jaber", "hamad@example.com", "DEMO-1007"],
-  ["Mariam Khalid", "mariam@example.com", "DEMO-1008"],
-  ["Zaid Mansour", "zaid@example.com", "DEMO-1009"],
-  ["Sara Ahmed", "sara@example.com", "DEMO-1010"],
-  ["Khaled Aziz", "khaled@example.com", "DEMO-1011"],
-  ["Reem Faris", "reem@example.com", "DEMO-1012"]
+  ["Jordan Lee", "jordan.lee@example.com", "DEMO-1001"],
+  ["Taylor Morgan", "taylor.morgan@example.com", "DEMO-1002"],
+  ["Casey Bennett", "casey.bennett@example.com", "DEMO-1003"],
+  ["Morgan Price", "morgan.price@example.com", "DEMO-1004"],
+  ["Riley Carter", "riley.carter@example.com", "DEMO-1005"],
+  ["Avery Brooks", "avery.brooks@example.com", "DEMO-1006"],
+  ["Quinn Parker", "quinn.parker@example.com", "DEMO-1007"],
+  ["Jamie Rivera", "jamie.rivera@example.com", "DEMO-1008"],
+  ["Alex Foster", "alex.foster@example.com", "DEMO-1009"],
+  ["Reese Walker", "reese.walker@example.com", "DEMO-1010"],
+  ["Sydney Hayes", "sydney.hayes@example.com", "DEMO-1011"],
+  ["Cameron Reed", "cameron.reed@example.com", "DEMO-1012"]
 ];
 
 function hashToNumber(value, index) {
@@ -83,19 +83,18 @@ async function main() {
 
   await prisma.auditLog.deleteMany({
     where: {
-      entityType: "Campaign",
-      entityId: demoSlug
+      action: { in: ["demo.seed", "demo.draw"] }
     }
   });
 
   const campaign = await prisma.campaign.create({
     data: {
-      title: "Demo Summer Rewards Draw",
+      title: "Demo Customer Rewards Draw",
       slug: demoSlug,
       description:
-        "A sample public campaign showing entries, prizes, auditable draw results, and operator-facing management screens.",
+        "A sample rewards campaign showing public details, participant records, prize setup, auditable draw results, and admin workflows.",
       rules:
-        "Demo campaign for evaluating Open Lottery Manager.\n\nNo purchase, payment, or real prize is involved. Operators must replace these rules with their own lawful campaign terms before using the app in production.",
+        "Demo campaign for evaluating Open Lottery Manager.\n\nNo purchase, payment, or real prize is involved. Operators must replace these rules with their own lawful campaign terms before using the app in production.\n\nSample entries are fictional and use example.com email addresses.",
       status: "DRAWN",
       startsAt: new Date("2026-07-01T09:00:00.000Z"),
       endsAt: new Date("2026-07-31T18:00:00.000Z"),
@@ -104,20 +103,20 @@ async function main() {
       prizes: {
         create: [
           {
-            name: "Grand Prize",
-            description: "One featured winner for the headline campaign reward.",
+            name: "Premium Reward Package",
+            description: "One featured reward for the headline campaign winner.",
             quantity: 1,
             sortOrder: 1
           },
           {
             name: "Runner-Up Gift Card",
-            description: "Two runner-up rewards for additional verified participants.",
+            description: "Two gift card rewards for additional verified participants.",
             quantity: 2,
             sortOrder: 2
           },
           {
-            name: "Community Bonus",
-            description: "Three small bonus rewards for campaign engagement.",
+            name: "Participant Bonus",
+            description: "Three bonus rewards for eligible campaign participants.",
             quantity: 3,
             sortOrder: 3
           }

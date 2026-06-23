@@ -1,0 +1,54 @@
+name: Release checklist
+description: Track a patch release from local verification through published validation.
+title: "Release: v"
+labels: ["release"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this checklist for routine Open Lottery Manager patch releases. Do not include secrets, private deployment URLs, or participant data.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Target semantic version.
+      placeholder: "0.1.19"
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Release summary
+      description: Short summary of the user-facing, operator-facing, or maintenance changes.
+      placeholder: "Describe what changed and why this patch should be released."
+    validations:
+      required: true
+  - type: checkboxes
+    id: local_verification
+    attributes:
+      label: Local verification
+      options:
+        - label: "`npm test` passed"
+        - label: "`npm run lint` passed"
+        - label: "`npm run build` passed"
+        - label: "`npm run db:seed` completed for demo data"
+        - label: "`npm run smoke:e2e -- http://localhost:3000 --require-demo` passed against a running app"
+        - label: "`git diff --check` passed"
+  - type: checkboxes
+    id: release_steps
+    attributes:
+      label: Release steps
+      options:
+        - label: "Changelog entry is complete and has no placeholders"
+        - label: "Package version is bumped"
+        - label: "Release prep commit is pushed to `main`"
+        - label: "Annotated tag is pushed"
+        - label: "GitHub release is published with quick-start and compliance notes"
+  - type: checkboxes
+    id: github_validation
+    attributes:
+      label: GitHub validation
+      options:
+        - label: "`main` CI passed for the release commit"
+        - label: "Release Tag Validation passed for the release tag"
+        - label: "Latest release points at the intended tag"

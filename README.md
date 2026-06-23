@@ -1,11 +1,30 @@
 # Open Lottery Manager
 
 [![CI](https://github.com/qtrcipher/open-lottery-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/qtrcipher/open-lottery-manager/actions/workflows/ci.yml)
+[![Latest Release](https://img.shields.io/github/v/release/qtrcipher/open-lottery-manager?label=release)](https://github.com/qtrcipher/open-lottery-manager/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Open Lottery Manager is a self-hosted web app for lawful prize campaigns, raffles, promotional draws, and licensed lottery-style operations. It gives operators a simple admin dashboard, public campaign pages, auditable winner selection, and export-friendly results.
+Open Lottery Manager is a self-hosted web app for lawful prize campaigns, raffles, promotional draws, and licensed lottery-style operations. It gives operators public campaign pages, participant entry and lookup flows, an admin dashboard, auditable winner selection, CSV exports, backups, and deployment health checks.
 
 This project is software only. Operators are responsible for complying with all applicable licensing, age, tax, prize, advertising, consumer protection, and gambling laws in the places where they use it.
+
+## At A Glance
+
+- Public campaign pages with rules, prizes, entry status, ticket lookup, and draw records.
+- Admin tools for campaigns, participants, prizes, CSV import/export, audit logs, branding, and operations links.
+- Auditable draws with seed hashes, algorithm version, ordered winners, and export-friendly records.
+- Self-hosting support with Docker Compose, SQLite persistence, backup/restore helpers, runtime health checks, and smoke tests.
+- GitHub Actions for tests, lint, build, Docker validation, dependency audit, release validation, and E2E smoke checks.
+
+## Screenshots
+
+![Public home showing the demo campaign](docs/screenshots/public-home.png)
+
+![Admin dashboard listing campaigns](docs/screenshots/admin-dashboard.png)
+
+![Admin campaign management screen](docs/screenshots/campaign-management.png)
+
+![Public draw results with winners and seed hash](docs/screenshots/public-results.png)
 
 ## What This Is
 
@@ -37,30 +56,21 @@ npm install
 cp .env.example .env
 npm run hash-password -- "change-me"
 npm run db:push
+npm run db:seed
 npm run dev
 ```
 
-Update `.env` with the generated `ADMIN_PASSWORD_HASH`, a strong `AUTH_SECRET`, and your admin email. Then visit `http://localhost:3000/admin/login`.
+Update `.env` with the generated `ADMIN_PASSWORD_HASH`, a strong `AUTH_SECRET`, and your admin email before signing in. Then open `http://localhost:3000` for the public demo or `http://localhost:3000/admin/login` for the admin dashboard.
 
 ## Demo Data
 
-Load a sample campaign with prizes, entries, completed draw results, and audit records:
+Load a professional sample campaign with prizes, entries, completed draw results, and audit records:
 
 ```bash
 npm run db:seed
 ```
 
 The seed is idempotent and only replaces the fixed demo campaign at `/campaigns/demo-summer-rewards`.
-
-## Screenshots
-
-![Public home showing the demo campaign](docs/screenshots/public-home.png)
-
-![Admin dashboard listing campaigns](docs/screenshots/admin-dashboard.png)
-
-![Admin campaign management screen](docs/screenshots/campaign-management.png)
-
-![Public draw results with winners and seed hash](docs/screenshots/public-results.png)
 
 ## Run With Docker
 
@@ -108,8 +118,8 @@ Use a header row with these columns:
 
 ```csv
 name,email,reference
-Fatima Noor,fatima@example.com,INV-1001
-Omar Ali,omar@example.com,INV-1002
+Jordan Lee,jordan.lee@example.com,INV-1001
+Taylor Morgan,taylor.morgan@example.com,INV-1002
 ```
 
 `reference` is optional, but each email and reference must be unique within a campaign.
