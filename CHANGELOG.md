@@ -2,6 +2,26 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.19 - 2026-06-23
+
+Security and operations hardening
+
+### Added
+
+- Admin login attempts now use SQLite-backed rate limits.
+- Campaigns can require references for public entry and ticket lookup.
+- Docker images now include a runtime health check.
+
+### Changed
+
+- Rate limits ignore forwarded IP headers by default unless `TRUST_PROXY_HEADERS` is explicitly enabled.
+- Admin dashboard audit export counts now use database count queries instead of loading matching audit logs.
+- Content Security Policy no longer allows `unsafe-eval`.
+
+### Operations
+
+- Deployment, runbook, security, and contributor docs now document trusted proxy header handling and reference-required lookup.
+
 ## v0.1.18 - 2026-06-23
 
 Main CI E2E smoke check.
