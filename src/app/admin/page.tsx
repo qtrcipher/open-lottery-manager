@@ -141,15 +141,26 @@ export default async function AdminDashboard({
             <p className="mt-2 text-sm leading-6 text-ink/68">
               Run backup, restore, and smoke-test commands on the host server. The browser dashboard does not execute production maintenance tasks.
             </p>
+            <p className="mt-2 text-sm leading-6 text-ink/68">Documentation links open GitHub references only; they do not run maintenance tasks.</p>
           </div>
-          <a
-            className="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
-            href="https://github.com/qtrcipher/open-lottery-manager/blob/main/DEPLOYMENT.md"
-            rel="noreferrer"
-            target="_blank"
-          >
-            Deployment guide
-          </a>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {[
+              ["Deployment guide", "https://github.com/qtrcipher/open-lottery-manager/blob/main/DEPLOYMENT.md"],
+              ["Operator runbook", "https://github.com/qtrcipher/open-lottery-manager/blob/main/RUNBOOK.md"],
+              ["Release guide", "https://github.com/qtrcipher/open-lottery-manager/blob/main/docs/RELEASING.md"],
+              ["Security headers", "https://github.com/qtrcipher/open-lottery-manager/blob/main/DEPLOYMENT.md#reverse-proxy-and-https"]
+            ].map(([label, href]) => (
+              <a
+                key={href}
+                className="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+                href={href}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {label}
+              </a>
+            ))}
+          </div>
         </div>
         <dl className="mt-4 grid gap-3 text-sm lg:grid-cols-3">
           <div className="rounded-md border border-line bg-paper/70 p-3">
