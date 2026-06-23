@@ -4,7 +4,8 @@ import { Download, PlusCircle } from "lucide-react";
 import { restoreCampaignAction } from "@/app/admin/actions";
 import { ButtonLink, Label, PageShell, Panel, StatusBadge, SubmitButton, TextInput } from "@/components/ui";
 import { recentActivityItems } from "@/lib/audit-activity";
-import { campaignStatusOptions, globalExportHref, parseGlobalExportFilters } from "@/lib/export-filters";
+import { auditExportCount } from "@/lib/export-counts";
+import { auditExportWhere, campaignStatusOptions, entryExportWhere, globalExportHref, parseGlobalExportFilters, winnerExportWhere } from "@/lib/export-filters";
 import { checkDatabaseHealth, createHealthPayload } from "@/lib/health";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
@@ -45,7 +46,26 @@ export default async function AdminDashboard({
       take: 5
     })
   ]);
+  const [entryExportCount, winnerExportCount, auditCountLogs] = await Promise.all([
+    prisma.entry.count({ where: entryExportWhere(exportFilters) }),
+    prisma.drawWinner.count({ where: winnerExportWhere(exportFilters) }),
+    prisma.auditLog.findMany({
+      where: auditExportWhere(exportFilters),
+      select: {
+        action: true,
+        entityType: true,
+        entityId: true,
+        metadata: true,
+        createdAt: true
+      }
+    })
+  ]);
   const health = createHealthPayload({ databaseStatus });
+  const exportCounts = {
+    entries: entryExportCount,
+    winners: winnerExportCount,
+    audit: auditExportCount(auditCountLogs, campaigns, exportFilters)
+  };
   const recentActivity = recentActivityItems(activityLogs, campaigns);
   const activeCampaigns = campaigns.filter((campaign) => campaign.status !== "ARCHIVED");
   const archivedCampaigns = campaigns.filter((campaign) => campaign.status === "ARCHIVED");
@@ -193,9 +213,9 @@ export default async function AdminDashboard({
           </div>
         </form>
         <div className="mt-4 flex flex-wrap gap-3">
-          <ExportLink href={globalExportHref("entries", exportFilters)}>All entries CSV</ExportLink>
-          <ExportLink href={globalExportHref("winners", exportFilters)}>All winners CSV</ExportLink>
-          <ExportLink href={globalExportHref("audit", exportFilters)}>All audit CSV</ExportLink>
+          <ExportLink href={globalExportHref("entries", exportFilters)}>All entries CSV · {exportCounts.entries} matching</ExportLink>
+          <ExportLink href={globalExportHref("winners", exportFilters)}>All winners CSV · {exportCounts.winners} matching</ExportLink>
+          <ExportLink href={globalExportHref("audit", exportFilters)}>All audit CSV · {exportCounts.audit} matching</ExportLink>
         </div>
       </Panel>
 
