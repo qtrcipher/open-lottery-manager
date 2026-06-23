@@ -2,6 +2,23 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.10 - 2026-06-23
+
+Admin activity, export count, and operations documentation improvements.
+
+### Added
+
+- Admin dashboard Recent activity panel for the latest audit log events with campaign context links when available.
+- Matching result counts for global entries, winners, and audit CSV exports.
+
+### Changed
+
+- Global export UI now shows how many entries, winners, and audit records match the selected filters before download.
+
+### Operations
+
+- README and deployment documentation now explain dashboard-level global exports, filters, and backup readiness behavior.
+
 ## v0.1.9 - 2026-06-22
 
 Export filtering, backup readiness, and version visibility improvements.
