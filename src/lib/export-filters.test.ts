@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   auditExportWhere,
+  auditExportWhereForCampaignIds,
   entryExportWhere,
   filterCampaignContexts,
   globalExportHref,
@@ -99,6 +100,20 @@ describe("export Prisma filters", () => {
             { entityType: "Campaign", entityId: "campaign_1" },
             { metadata: { contains: '"campaignId":"campaign_1"' } },
             { metadata: { contains: '"campaignId": "campaign_1"' } }
+          ]
+        }
+      ]
+    });
+  });
+
+  it("builds audit filters for a set of campaign ids", () => {
+    expect(auditExportWhereForCampaignIds(parseGlobalExportFilters({ status: "DRAWN" }), ["campaign_2"])).toMatchObject({
+      AND: [
+        {
+          OR: [
+            { entityType: "Campaign", entityId: "campaign_2" },
+            { metadata: { contains: '"campaignId":"campaign_2"' } },
+            { metadata: { contains: '"campaignId": "campaign_2"' } }
           ]
         }
       ]

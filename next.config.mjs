@@ -6,7 +6,7 @@ const __dirname = path.dirname(__filename);
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: http: https:",
   "connect-src 'self'",

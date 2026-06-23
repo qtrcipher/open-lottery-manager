@@ -4,8 +4,16 @@ import { Download, PlusCircle } from "lucide-react";
 import { restoreCampaignAction } from "@/app/admin/actions";
 import { ButtonLink, Label, PageShell, Panel, StatusBadge, SubmitButton, TextInput } from "@/components/ui";
 import { recentActivityItems } from "@/lib/audit-activity";
-import { auditExportCount } from "@/lib/export-counts";
-import { auditExportWhere, campaignStatusOptions, entryExportWhere, globalExportHref, parseGlobalExportFilters, winnerExportWhere } from "@/lib/export-filters";
+import {
+  auditExportWhere,
+  auditExportWhereForCampaignIds,
+  campaignStatusOptions,
+  entryExportWhere,
+  filterCampaignContexts,
+  globalExportHref,
+  parseGlobalExportFilters,
+  winnerExportWhere
+} from "@/lib/export-filters";
 import { checkDatabaseHealth, createHealthPayload } from "@/lib/health";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
@@ -46,19 +54,17 @@ export default async function AdminDashboard({
       take: 5
     })
   ]);
-  const [entryExportCount, winnerExportCount, auditCountLogs] = await Promise.all([
+  const auditCountWhere =
+    exportFilters.campaignId || exportFilters.status
+      ? auditExportWhereForCampaignIds(
+          exportFilters,
+          filterCampaignContexts(campaigns, exportFilters).map((campaign) => campaign.id)
+        )
+      : auditExportWhere(exportFilters);
+  const [entryExportCount, winnerExportCount, auditCount] = await Promise.all([
     prisma.entry.count({ where: entryExportWhere(exportFilters) }),
     prisma.drawWinner.count({ where: winnerExportWhere(exportFilters) }),
-    prisma.auditLog.findMany({
-      where: auditExportWhere(exportFilters),
-      select: {
-        action: true,
-        entityType: true,
-        entityId: true,
-        metadata: true,
-        createdAt: true
-      }
-    })
+    prisma.auditLog.count({ where: auditCountWhere })
   ]);
   const [totalCampaignCount, activeCampaignCount, totalEntryCount, totalWinnerCount, totalAuditCount] = await Promise.all([
     prisma.campaign.count(),
@@ -78,7 +84,7 @@ export default async function AdminDashboard({
   const exportCounts = {
     entries: entryExportCount,
     winners: winnerExportCount,
-    audit: auditExportCount(auditCountLogs, campaigns, exportFilters)
+    audit: auditCount
   };
   const recentActivity = recentActivityItems(activityLogs, campaigns);
   const activeCampaigns = campaigns.filter((campaign) => campaign.status !== "ARCHIVED");

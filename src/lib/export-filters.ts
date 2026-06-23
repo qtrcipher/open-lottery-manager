@@ -135,6 +135,29 @@ export function auditExportWhere(filters: GlobalExportFilters): Prisma.AuditLogW
   return and.length > 0 ? { AND: and } : {};
 }
 
+export function auditExportWhereForCampaignIds(filters: GlobalExportFilters, campaignIds: string[]): Prisma.AuditLogWhereInput {
+  const and: Prisma.AuditLogWhereInput[] = [];
+  const createdAt = dateRangeFilter(filters);
+
+  if (createdAt) {
+    and.push({ createdAt });
+  }
+
+  if (campaignIds.length === 0) {
+    and.push({ id: { in: [] } });
+  } else {
+    and.push({
+      OR: campaignIds.flatMap((campaignId) => [
+        { entityType: "Campaign", entityId: campaignId },
+        { metadata: { contains: `"campaignId":"${campaignId}"` } },
+        { metadata: { contains: `"campaignId": "${campaignId}"` } }
+      ])
+    });
+  }
+
+  return and.length > 0 ? { AND: and } : {};
+}
+
 export function filterCampaignContexts<T extends { id: string; status: string }>(campaigns: T[], filters: GlobalExportFilters): T[] {
   return campaigns.filter((campaign) => {
     if (filters.campaignId && campaign.id !== filters.campaignId) {
