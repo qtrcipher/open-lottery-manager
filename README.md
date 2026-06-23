@@ -129,6 +129,8 @@ Campaign admins can download CSV records from the campaign management page:
 - winners: completed draw winners, prize names, seed hash, and algorithm version.
 - audit log: campaign, entry, prize, import, and draw activity tied to the campaign.
 
+The admin dashboard also provides global CSV exports for entries, winners, and audit records across all campaigns. Use the dashboard export filters to narrow downloads by campaign, campaign status, and date range before downloading. The dashboard shows matching result counts beside each global export link.
+
 ## Campaign Lifecycle
 
 Archive old campaigns to remove them from public and active admin lists while preserving entries, winners, exports, and audit history. Archived campaigns can be restored from the admin dashboard or campaign management page.

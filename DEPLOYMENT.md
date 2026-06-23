@@ -85,6 +85,8 @@ The restore script accepts only non-empty `backups/prod-YYYYMMDD-HHMMSS.db` file
 
 Always test restore steps on a copy before relying on them for production.
 
+The admin dashboard Backup readiness panel summarizes these expectations and links back to this guide. It is informational only: it does not inspect backup files, expose database files, or run backup and restore commands from the browser.
+
 ## Reverse Proxy And HTTPS
 
 Terminate HTTPS at a trusted reverse proxy such as Caddy, Nginx, Traefik, or a managed edge service. Forward traffic to the app on port `3000`.
