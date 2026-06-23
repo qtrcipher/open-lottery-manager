@@ -96,8 +96,10 @@ function prizeMessageText(message?: string): string | null {
   return null;
 }
 
-function entryStatusFilter(value?: string): "all" | "eligible" | "ineligible" {
-  if (value === "eligible" || value === "ineligible") {
+type EntryStatusFilter = "all" | "eligible" | "ineligible" | "approved" | "flagged" | "rejected";
+
+function entryStatusFilter(value?: string): EntryStatusFilter {
+  if (value === "eligible" || value === "ineligible" || value === "approved" || value === "flagged" || value === "rejected") {
     return value;
   }
 
@@ -170,6 +172,9 @@ export default async function CampaignAdminPage({
     campaignId: campaign.id,
     ...(selectedEntryStatus === "eligible" ? { isEligible: true } : {}),
     ...(selectedEntryStatus === "ineligible" ? { isEligible: false } : {}),
+    ...(selectedEntryStatus === "approved" ? { reviewStatus: "APPROVED" } : {}),
+    ...(selectedEntryStatus === "flagged" ? { reviewStatus: "FLAGGED" } : {}),
+    ...(selectedEntryStatus === "rejected" ? { reviewStatus: "REJECTED" } : {}),
     ...(entrySearch
       ? {
           OR: [
@@ -181,13 +186,15 @@ export default async function CampaignAdminPage({
         }
       : {})
   };
-  const [entries, eligibleEntryCount, ineligibleEntryCount] = await Promise.all([
+  const [entries, eligibleEntryCount, ineligibleEntryCount, flaggedEntryCount, rejectedEntryCount] = await Promise.all([
     prisma.entry.findMany({
       where: entryWhere,
       orderBy: { createdAt: "desc" }
     }),
     prisma.entry.count({ where: { campaignId: campaign.id, isEligible: true } }),
-    prisma.entry.count({ where: { campaignId: campaign.id, isEligible: false } })
+    prisma.entry.count({ where: { campaignId: campaign.id, isEligible: false } }),
+    prisma.entry.count({ where: { campaignId: campaign.id, reviewStatus: "FLAGGED" } }),
+    prisma.entry.count({ where: { campaignId: campaign.id, reviewStatus: "REJECTED" } })
   ]);
   const auditTotalCount = await prisma.auditLog.count({ where: auditWhere });
   const auditPage = clampAuditLogPage(auditFilters.page, auditTotalCount);
@@ -569,7 +576,7 @@ export default async function CampaignAdminPage({
             {!canEditSetup ? <span className="rounded-full border border-line bg-paper px-3 py-1 text-xs font-semibold uppercase text-ink/60">Read only</span> : null}
           </div>
 
-          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-4">
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
             <div className="rounded-md border border-line bg-paper/70 p-3">
               <dt className="text-ink/60">Total</dt>
               <dd className="mt-1 text-xl font-bold">{campaign._count.entries}</dd>
@@ -581,6 +588,14 @@ export default async function CampaignAdminPage({
             <div className="rounded-md border border-line bg-paper/70 p-3">
               <dt className="text-ink/60">Ineligible</dt>
               <dd className="mt-1 text-xl font-bold text-brick">{ineligibleEntryCount}</dd>
+            </div>
+            <div className="rounded-md border border-line bg-paper/70 p-3">
+              <dt className="text-ink/60">Flagged</dt>
+              <dd className="mt-1 text-xl font-bold text-brick">{flaggedEntryCount}</dd>
+            </div>
+            <div className="rounded-md border border-line bg-paper/70 p-3">
+              <dt className="text-ink/60">Rejected</dt>
+              <dd className="mt-1 text-xl font-bold">{rejectedEntryCount}</dd>
             </div>
             <div className="rounded-md border border-line bg-paper/70 p-3">
               <dt className="text-ink/60">Visible</dt>
@@ -615,6 +630,9 @@ export default async function CampaignAdminPage({
                 <option value="all">All entries</option>
                 <option value="eligible">Eligible</option>
                 <option value="ineligible">Ineligible</option>
+                <option value="approved">Approved</option>
+                <option value="flagged">Flagged</option>
+                <option value="rejected">Rejected</option>
               </select>
             </div>
             <SubmitButton>Filter</SubmitButton>
@@ -630,13 +648,14 @@ export default async function CampaignAdminPage({
             {entries.length === 0 ? (
               <p className="rounded-md border border-line bg-paper/70 p-4 text-sm text-ink/68">No participants match the current filters.</p>
             ) : (
-              <table className="min-w-[980px] w-full border-separate border-spacing-0 text-left text-sm">
+              <table className="min-w-[1180px] w-full border-separate border-spacing-0 text-left text-sm">
                 <thead>
                   <tr className="text-xs uppercase text-ink/58">
                     <th className="border-b border-line px-3 py-2 font-semibold">Participant</th>
                     <th className="border-b border-line px-3 py-2 font-semibold">Reference</th>
                     <th className="border-b border-line px-3 py-2 font-semibold">Ticket</th>
                     <th className="border-b border-line px-3 py-2 font-semibold">Eligible</th>
+                    <th className="border-b border-line px-3 py-2 font-semibold">Review</th>
                     <th className="border-b border-line px-3 py-2 font-semibold">Entered</th>
                     <th className="border-b border-line px-3 py-2 font-semibold">Actions</th>
                   </tr>
@@ -687,6 +706,39 @@ export default async function CampaignAdminPage({
                             <span className={`font-semibold ${entry.isEligible ? "text-moss" : "text-brick"}`}>
                               {entry.isEligible ? "Eligible" : "Ineligible"}
                             </span>
+                          )}
+                        </td>
+                        <td className="border-b border-line px-3 py-3">
+                          {canEditSetup ? (
+                            <div className="grid min-w-48 gap-2">
+                              <select
+                                aria-label="Review status"
+                                className="min-h-11 w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm"
+                                form={updateFormId}
+                                name="reviewStatus"
+                                defaultValue={entry.reviewStatus}
+                              >
+                                <option value="APPROVED">Approved</option>
+                                <option value="FLAGGED">Flagged</option>
+                                <option value="REJECTED">Rejected</option>
+                              </select>
+                              <TextArea
+                                aria-label="Review notes"
+                                form={updateFormId}
+                                name="reviewNotes"
+                                defaultValue={entry.reviewNotes ?? ""}
+                                maxLength={1000}
+                                placeholder={entry.riskFlags ? `Flags: ${entry.riskFlags}` : "Review notes"}
+                              />
+                            </div>
+                          ) : (
+                            <div>
+                              <span className={`font-semibold ${entry.reviewStatus === "APPROVED" ? "text-moss" : "text-brick"}`}>
+                                {entry.reviewStatus}
+                              </span>
+                              {entry.riskFlags ? <p className="mt-1 text-xs text-ink/58">Flags: {entry.riskFlags}</p> : null}
+                              {entry.reviewNotes ? <p className="mt-1 text-xs text-ink/58">{entry.reviewNotes}</p> : null}
+                            </div>
                           )}
                         </td>
                         <td className="border-b border-line px-3 py-3 text-ink/64">{entry.createdAt.toLocaleString()}</td>

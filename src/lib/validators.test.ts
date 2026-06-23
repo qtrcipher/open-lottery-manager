@@ -137,14 +137,18 @@ describe("entryUpdateSchema", () => {
       name: "  Jordan Lee  ",
       email: " JORDAN@example.COM ",
       reference: "",
-      isEligible: false
+      isEligible: false,
+      reviewStatus: "FLAGGED",
+      reviewNotes: ""
     });
 
     expect(parsed).toEqual({
       name: "Jordan Lee",
       email: "jordan@example.com",
       reference: null,
-      isEligible: false
+      isEligible: false,
+      reviewStatus: "FLAGGED",
+      reviewNotes: null
     });
   });
 
@@ -154,7 +158,8 @@ describe("entryUpdateSchema", () => {
         name: "",
         email: "not-an-email",
         reference: "x".repeat(121),
-        isEligible: true
+        isEligible: true,
+        reviewStatus: "UNKNOWN"
       }).success
     ).toBe(false);
   });

@@ -219,6 +219,12 @@ export default async function CampaignPage({
                   <Label>Reference</Label>
                   <TextInput name="reference" maxLength={120} required={campaign.requireLookupReference} placeholder={campaign.requireLookupReference ? "Required" : "Optional"} />
                 </div>
+                {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ? (
+                  <div className="md:col-span-3">
+                    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+                    <div className="cf-turnstile" data-sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} />
+                  </div>
+                ) : null}
                 <SubmitButton>Enter</SubmitButton>
               </form>
             </>

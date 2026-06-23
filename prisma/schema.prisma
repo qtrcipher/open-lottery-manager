@@ -71,6 +71,9 @@ model Entry {
   reference   String?
   ticketCode  String
   isEligible  Boolean  @default(true)
+  reviewStatus String   @default("APPROVED")
+  reviewNotes  String?
+  riskFlags    String?
   createdAt   DateTime @default(now())
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   wins        DrawWinner[]

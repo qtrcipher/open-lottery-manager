@@ -6,10 +6,12 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { canAcceptPublicEntries, type CampaignStatusValue } from "@/lib/campaign-lifecycle";
 import { getAppSettings } from "@/lib/app-settings";
+import { detectEntryRisk, reviewStatusForRiskFlags } from "@/lib/abuse";
 import { sendTicketReceipt } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, isHoneypotFilled, rateLimitSubjectFromHeaders } from "@/lib/rate-limit";
 import { createTicketCode } from "@/lib/tickets";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 import { publicEntrySchema, ticketLookupSchema } from "@/lib/validators";
 
 const publicEntryRateLimit = { limit: 5, windowSeconds: 10 * 60 };
@@ -55,17 +57,29 @@ function publicBaseUrl(requestHeaders: Headers): string {
   return `${protocol}://${host ?? "localhost:3000"}`;
 }
 
+function remoteIpFromHeaders(requestHeaders: Headers): string | undefined {
+  if (process.env.TRUST_PROXY_HEADERS === "true") {
+    return requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined;
+  }
+
+  return undefined;
+}
+
 async function createEntryWithTicket({
   campaignId,
   name,
   email,
   reference,
+  reviewStatus,
+  riskFlags,
   tx = prisma
 }: {
   campaignId: string;
   name: string;
   email: string;
   reference?: string;
+  reviewStatus?: string;
+  riskFlags?: string;
   tx?: Prisma.TransactionClient | typeof prisma;
 }) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -76,7 +90,9 @@ async function createEntryWithTicket({
           name,
           email,
           reference,
-          ticketCode: createTicketCode()
+          ticketCode: createTicketCode(),
+          reviewStatus,
+          riskFlags
         }
       });
     } catch (error) {
@@ -122,6 +138,15 @@ export async function createPublicEntryAction(formData: FormData) {
     redirectToCampaign(slug, { entry: "invalid" });
   }
 
+  const turnstile = await verifyTurnstileToken({
+    token: formString(formData, "cf-turnstile-response") || undefined,
+    remoteIp: remoteIpFromHeaders(requestHeaders)
+  });
+
+  if (!turnstile.ok) {
+    redirectToCampaign(slug, { entry: "invalid" });
+  }
+
   const campaign = await prisma.campaign.findUnique({
     where: { slug },
     select: {
@@ -161,6 +186,8 @@ export async function createPublicEntryAction(formData: FormData) {
 
   let entry;
   try {
+    const riskFlags = detectEntryRisk({ email: parsed.data.email });
+    const reviewStatus = reviewStatusForRiskFlags(riskFlags);
     entry = await prisma.$transaction(async (tx) => {
       const locked = await tx.campaign.updateMany({
         where: {
@@ -208,6 +235,8 @@ export async function createPublicEntryAction(formData: FormData) {
         name: parsed.data.name,
         email: parsed.data.email,
         reference: parsed.data.reference,
+        reviewStatus,
+        riskFlags: riskFlags.length > 0 ? riskFlags.join(",") : undefined,
         tx
       });
 
@@ -216,7 +245,7 @@ export async function createPublicEntryAction(formData: FormData) {
           action: "entry.public_create",
           entityType: "Entry",
           entityId: entry.id,
-          metadata: JSON.stringify({ campaignId: campaign.id })
+          metadata: JSON.stringify({ campaignId: campaign.id, reviewStatus, riskFlags })
         }
       });
 

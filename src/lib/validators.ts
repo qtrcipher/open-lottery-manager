@@ -83,7 +83,9 @@ export const entryUpdateSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.string().trim().email().max(200).transform((value) => value.toLowerCase()),
   reference: z.preprocess(emptyToNull, z.string().max(120).nullable()),
-  isEligible: z.boolean()
+  isEligible: z.boolean(),
+  reviewStatus: z.enum(["APPROVED", "FLAGGED", "REJECTED"]).default("APPROVED"),
+  reviewNotes: z.preprocess(emptyToNull, z.string().max(1000).nullable())
 });
 
 export const publicEntrySchema = entrySchema;

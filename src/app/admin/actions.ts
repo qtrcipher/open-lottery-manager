@@ -15,6 +15,7 @@ import {
 import { type CsvImportError, type CsvImportRow, type CsvImportSummary, validateEntriesCsv } from "@/lib/csv";
 import { drawAlgorithmVersion, selectWinners } from "@/lib/draw";
 import { buildDrawVerificationBundle, createDrawEntryManifest, createVerificationBundleHash } from "@/lib/draw-verification";
+import { isApprovedForDraw } from "@/lib/abuse";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { slugify } from "@/lib/slug";
@@ -517,7 +518,9 @@ export async function updateEntryAction(formData: FormData) {
     name: formString(formData, "name"),
     email: formString(formData, "email"),
     reference: formString(formData, "reference"),
-    isEligible: formData.get("isEligible") === "on"
+    isEligible: formData.get("isEligible") === "on",
+    reviewStatus: formString(formData, "reviewStatus") || "APPROVED",
+    reviewNotes: formString(formData, "reviewNotes")
   });
 
   let campaign;
@@ -539,7 +542,9 @@ export async function updateEntryAction(formData: FormData) {
           name: parsed.name,
           email: parsed.email,
           reference: parsed.reference,
-          isEligible: parsed.isEligible
+          isEligible: parsed.isEligible,
+          reviewStatus: parsed.reviewStatus,
+          reviewNotes: parsed.reviewNotes
         }
       });
 
@@ -551,7 +556,8 @@ export async function updateEntryAction(formData: FormData) {
           metadata: JSON.stringify({
             admin: admin.email,
             campaignId,
-            ticketCode: existing.ticketCode
+            ticketCode: existing.ticketCode,
+            reviewStatus: parsed.reviewStatus
           })
         }
       });
@@ -773,7 +779,7 @@ export async function runDrawAction(formData: FormData) {
       throw new Error("Add at least one prize before running a draw.");
     }
 
-    const eligibleEntries = campaign.entries.filter((entry) => entry.isEligible);
+    const eligibleEntries = campaign.entries.filter(isApprovedForDraw);
     if (eligibleEntries.length === 0) {
       throw new Error("Add at least one eligible entry before running a draw.");
     }
