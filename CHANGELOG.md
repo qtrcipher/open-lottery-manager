@@ -2,6 +2,22 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.16 - 2026-06-23
+
+E2E smoke QA script.
+
+### Added
+
+- Playwright-based E2E smoke script for health, public home, admin login, and demo campaign pages.
+
+### Changed
+
+- README, deployment guide, and operator runbook now document `npm run smoke:e2e -- http://localhost:3000`.
+
+### Operations
+
+- Operators can run optional `--require-demo` checks after seeding demo data to validate campaign, lookup, and draw record pages.
+
 ## v0.1.15 - 2026-06-23
 
 Admin Operations documentation links.
