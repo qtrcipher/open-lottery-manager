@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Download, PlusCircle } from "lucide-react";
 import { restoreCampaignAction } from "@/app/admin/actions";
 import { ButtonLink, Label, PageShell, Panel, StatusBadge, SubmitButton, TextInput } from "@/components/ui";
+import { recentActivityItems } from "@/lib/audit-activity";
 import { campaignStatusOptions, globalExportHref, parseGlobalExportFilters } from "@/lib/export-filters";
 import { checkDatabaseHealth, createHealthPayload } from "@/lib/health";
 import { prisma } from "@/lib/prisma";
@@ -31,16 +32,21 @@ export default async function AdminDashboard({
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const exportFilters = parseGlobalExportFilters(resolvedSearchParams);
 
-  const [campaigns, databaseStatus] = await Promise.all([
+  const [campaigns, databaseStatus, activityLogs] = await Promise.all([
     prisma.campaign.findMany({
       orderBy: { createdAt: "desc" },
       include: {
         _count: { select: { entries: true, prizes: true, draws: true } }
       }
     }),
-    checkDatabaseHealth()
+    checkDatabaseHealth(),
+    prisma.auditLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5
+    })
   ]);
   const health = createHealthPayload({ databaseStatus });
+  const recentActivity = recentActivityItems(activityLogs, campaigns);
   const activeCampaigns = campaigns.filter((campaign) => campaign.status !== "ARCHIVED");
   const archivedCampaigns = campaigns.filter((campaign) => campaign.status === "ARCHIVED");
 
@@ -191,6 +197,38 @@ export default async function AdminDashboard({
           <ExportLink href={globalExportHref("winners", exportFilters)}>All winners CSV</ExportLink>
           <ExportLink href={globalExportHref("audit", exportFilters)}>All audit CSV</ExportLink>
         </div>
+      </Panel>
+
+      <Panel className="mb-5">
+        <div>
+          <h2 className="text-xl font-semibold">Recent activity</h2>
+          <p className="mt-2 text-sm leading-6 text-ink/68">Latest admin, campaign, entry, prize, import, draw, and settings events.</p>
+        </div>
+        {recentActivity.length === 0 ? (
+          <p className="mt-4 rounded-md border border-line bg-paper/70 p-4 text-sm text-ink/68">No audit activity has been recorded yet.</p>
+        ) : (
+          <div className="mt-4 divide-y divide-line rounded-md border border-line bg-paper/70">
+            {recentActivity.map((activity) => (
+              <div key={`${activity.action}-${activity.entityId}-${activity.createdAt.toISOString()}`} className="flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-semibold">{activity.action}</p>
+                  <p className="mt-1 text-xs text-ink/62">
+                    {activity.entityType} <span className="font-mono">{activity.entityId}</span>
+                    {activity.campaign ? " · " : ""}
+                    {activity.campaign ? (
+                      <Link className="font-semibold text-moss hover:underline" href={`/admin/campaigns/${activity.campaign.id}`}>
+                        {activity.campaign.title}
+                      </Link>
+                    ) : null}
+                  </p>
+                </div>
+                <time className="text-xs text-ink/62" dateTime={activity.createdAt.toISOString()}>
+                  {activity.createdAt.toLocaleString()}
+                </time>
+              </div>
+            ))}
+          </div>
+        )}
       </Panel>
 
       {activeCampaigns.length === 0 ? (
