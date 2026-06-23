@@ -2,6 +2,22 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.1.17 - 2026-06-23
+
+Release validation E2E smoke.
+
+### Added
+
+- Release Tag Validation workflow now runs the Playwright E2E smoke check against a started app.
+
+### Changed
+
+- Release validation now seeds demo data and requires demo campaign, ticket lookup, and draw record pages to render.
+
+### Operations
+
+- Published release tags now verify app startup, SQLite schema setup, seeded demo data, health, and core page rendering before passing validation.
+
 ## v0.1.16 - 2026-06-23
 
 E2E smoke QA script.
