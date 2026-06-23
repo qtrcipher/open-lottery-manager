@@ -172,7 +172,7 @@ For maintainer release steps, see [docs/RELEASING.md](docs/RELEASING.md).
 
 - `npm run dev`: start the local development server.
 - `npm run build`: generate Prisma Client and build the app.
-- `npm run lint`: run Next.js lint checks.
+- `npm run lint`: run ESLint checks.
 - `npm test`: run automated tests.
 - `npm run db:push`: apply the Prisma schema to the configured SQLite database.
 - `npm run db:seed`: load the demo campaign.
