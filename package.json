@@ -27,7 +27,7 @@
   "dependencies": {
     "@prisma/client": "^6.10.1",
     "@types/nodemailer": "^8.0.1",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^1.21.0",
     "next": "16.2.9",
     "nodemailer": "^9.0.1",
     "prisma": "^6.10.1",
