@@ -39,6 +39,41 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Install Playwright browser
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare smoke test database
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          npm run db:push
+          npm run db:seed
+
+      - name: Start app for E2E smoke
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          npm run start &
+          echo "$!" > .next-server.pid
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error http://localhost:3000/api/health > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "App did not become healthy on http://localhost:3000."
+          exit 1
+
+      - name: Run E2E smoke
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npm run smoke:e2e -- http://localhost:3000 --require-demo
+
+      - name: Stop app
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if [ -f .next-server.pid ]; then
+            kill "$(cat .next-server.pid)" || true
+          fi
+
       - name: Build Docker image
         run: docker build .
 
