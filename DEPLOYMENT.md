@@ -23,6 +23,7 @@ Edit `.env` before starting:
 - `ADMIN_EMAIL`: the operator admin login email.
 - `ADMIN_PASSWORD_HASH`: the generated password hash.
 - `PUBLIC_APP_URL`: optional public HTTPS URL shown in admin system status.
+- `TRUST_PROXY_HEADERS`: set to `true` only when a trusted proxy controls `x-forwarded-for`, `x-real-ip`, or `cf-connecting-ip`.
 
 Start the app:
 
@@ -111,11 +112,11 @@ Configure the proxy to:
 - preserve `Host` and protocol headers, and
 - restrict access to the admin URL if your operating model requires it.
 
-Public entry and ticket lookup rate limits read client identity from `x-forwarded-for`, `x-real-ip`, then `cf-connecting-ip`. Only allow your trusted proxy to set those headers; otherwise clients can spoof IP identity and weaken rate limiting.
+Public entry, ticket lookup, and admin login rate limits ignore forwarded IP headers by default. Set `TRUST_PROXY_HEADERS=true` only when the app is behind a proxy or edge service that strips client-supplied forwarding headers and sets trusted `x-forwarded-for`, `x-real-ip`, or `cf-connecting-ip` values.
 
 Reverse proxies and load balancers can use `/api/health` for readiness checks. The endpoint is unauthenticated and intentionally exposes only basic status, version, timestamp, and database connectivity.
 
-The app emits baseline browser security headers on every route, including Content Security Policy, frame blocking, content-type sniffing protection, referrer policy, permissions policy, and production HSTS. Preserve these headers at the reverse proxy unless you intentionally replace them with an equivalent or stricter policy. If you customize the policy, retest admin pages, public entry forms, ticket lookup, exports, and operator logo URLs.
+The app emits baseline browser security headers on every route, including Content Security Policy, frame blocking, content-type sniffing protection, referrer policy, permissions policy, and production HSTS. Preserve these headers at the reverse proxy unless you intentionally replace them with an equivalent or stricter policy. The default CSP keeps inline script/style support for Next.js rendering but does not allow `unsafe-eval`. If you customize the policy, retest admin pages, public entry forms, ticket lookup, exports, and operator logo URLs.
 
 ## Upgrade Workflow
 
@@ -145,7 +146,7 @@ After upgrade, verify:
 - admin login works,
 - campaign lists load,
 - public campaign pages load,
-- public entry and ticket lookup still work on a test campaign, and
+- public entry and ticket lookup still work on a test campaign, including reference-required lookup if enabled, and
 - recent audit logs and completed draw records are still present.
 
 ## Troubleshooting
@@ -162,7 +163,7 @@ docker compose -f docker-compose.prod.yml logs app
 - Failed smoke test: verify the URL passed to `npm run smoke:deploy -- <url>` is reachable from the host running the command and points to this app, not only to the reverse proxy.
 - Backup failure: confirm Docker is running, the production Compose project can stop/start the `app` service, and `/app/data/prod.db` exists before running `npm run backup`.
 - Restore failure: use only files directly inside `backups/` with the `prod-YYYYMMDD-HHMMSS.db` naming pattern, and include `--confirm`.
-- Public rate limits not behaving as expected: allow only your trusted reverse proxy to set `x-forwarded-for`, `x-real-ip`, or `cf-connecting-ip`.
+- Public rate limits not behaving as expected: set `TRUST_PROXY_HEADERS=true` only behind a trusted reverse proxy; otherwise the app intentionally ignores forwarded IP headers.
 
 The app does not send email by default. If an operator adds SMTP or transactional email later, document and test those settings separately.
 
@@ -173,7 +174,8 @@ The app does not send email by default. If an operator adds SMTP or transactiona
 - Configure `/admin/settings` with public operator name and support email.
 - Use a strong admin password and keep `.env` private.
 - Confirm database backups and restore steps.
-- Confirm HTTPS and trusted proxy headers.
+- Confirm HTTPS and trusted proxy header configuration.
+- Require references for public entry and ticket lookup when email-only lookup is not strong enough for the campaign.
 - Confirm `docker compose -f docker-compose.prod.yml ps` shows the app service as healthy.
 - Confirm `npm run smoke:deploy -- http://localhost:3000` passes.
 - Confirm `npm run smoke:e2e -- http://localhost:3000` passes.

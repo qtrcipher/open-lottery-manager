@@ -6,9 +6,10 @@ This runbook is operational guidance for self-hosted Open Lottery Manager deploy
 
 - Confirm legal, tax, age, prize, advertising, privacy, and licensing requirements for the campaign.
 - Deploy from a tagged release, configure `.env`, and keep `AUTH_SECRET`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD_HASH` private.
-- Put the app behind HTTPS and a trusted reverse proxy. Only trusted infrastructure should set forwarded IP headers.
+- Put the app behind HTTPS and a trusted reverse proxy. Set `TRUST_PROXY_HEADERS=true` only when trusted infrastructure controls forwarded IP headers.
 - Configure `/admin/settings` with the public operator name, tagline, support email, logo, and brand color.
 - Replace demo rules with operator-approved campaign rules, eligibility terms, dates, and prize descriptions.
+- Require references for public entry and ticket lookup when email-only lookup is not strong enough for the campaign.
 - Run a test campaign, public entry, ticket lookup, draw, export, backup, restore drill, `npm run smoke:deploy -- http://localhost:3000`, and `npm run smoke:e2e -- http://localhost:3000`.
 
 ## During Campaign
@@ -48,5 +49,5 @@ This runbook is operational guidance for self-hosted Open Lottery Manager deploy
 - Admin login issue: confirm `ADMIN_EMAIL`, regenerate `ADMIN_PASSWORD_HASH`, and check app logs.
 - Unhealthy app: run `docker compose -f docker-compose.prod.yml ps`, inspect logs, and call `/api/health`.
 - Failed smoke test: verify the URL reaches this app and the database status is `ok`.
-- Bad rate limits or client identity: verify only the trusted proxy can set `x-forwarded-for`, `x-real-ip`, or `cf-connecting-ip`.
+- Bad rate limits or client identity: confirm whether `TRUST_PROXY_HEADERS` is enabled and verify only the trusted proxy can set `x-forwarded-for`, `x-real-ip`, or `cf-connecting-ip`.
 - Suspected data issue: stop public changes, take a backup, export audit logs, preserve logs, and restore only after testing on a copy.

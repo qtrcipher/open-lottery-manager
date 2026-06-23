@@ -28,6 +28,10 @@ function firstForwardedIp(value: string | null): string | null {
   return value?.split(",")[0]?.trim() || null;
 }
 
+export function trustProxyHeaders(value = process.env.TRUST_PROXY_HEADERS): boolean {
+  return value === "1" || value?.toLowerCase() === "true";
+}
+
 export function getClientIpFromHeaders(headers: HeaderReader): string {
   const forwardedFor = firstForwardedIp(headers.get("x-forwarded-for"));
   if (forwardedFor) {
@@ -45,6 +49,10 @@ export function getClientIpFromHeaders(headers: HeaderReader): string {
   }
 
   return "unknown";
+}
+
+export function rateLimitSubjectFromHeaders(headers: HeaderReader, fallbackSubject = "direct-client"): string {
+  return trustProxyHeaders() ? getClientIpFromHeaders(headers) : fallbackSubject;
 }
 
 export function hashRateLimitSubject(subject: string, secret = getRateLimitSecret()): string {

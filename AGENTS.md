@@ -31,4 +31,4 @@ Recent commits use short imperative subjects, for example `Add participant ticke
 
 ## Security & Compliance Tips
 
-This project distributes software only. Operators remain responsible for lottery, gambling, promotion, tax, age, prize, advertising, and licensing compliance. Do not add payments, wallets, KYC, geolocation, or regulated-money flows without a clear legal target and separate security review. Public entry and lookup forms already use honeypots and SQLite-backed rate limits; preserve those controls when changing participant flows.
+This project distributes software only. Operators remain responsible for lottery, gambling, promotion, tax, age, prize, advertising, and licensing compliance. Do not add payments, wallets, KYC, geolocation, or regulated-money flows without a clear legal target and separate security review. Admin login, public entry, and lookup flows use SQLite-backed rate limits; public forms also use honeypots. Preserve those controls and the explicit `TRUST_PROXY_HEADERS` behavior when changing participant or auth flows.

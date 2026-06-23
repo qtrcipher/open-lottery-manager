@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getClientIpFromHeaders, hashRateLimitSubject, isHoneypotFilled } from "./rate-limit";
+import { getClientIpFromHeaders, hashRateLimitSubject, isHoneypotFilled, rateLimitSubjectFromHeaders, trustProxyHeaders } from "./rate-limit";
 
 describe("getClientIpFromHeaders", () => {
   it("uses the first forwarded IP address", () => {
@@ -14,6 +14,29 @@ describe("getClientIpFromHeaders", () => {
   it("falls back to real IP and then unknown", () => {
     expect(getClientIpFromHeaders(new Headers({ "x-real-ip": "198.51.100.9" }))).toBe("198.51.100.9");
     expect(getClientIpFromHeaders(new Headers())).toBe("unknown");
+  });
+});
+
+describe("rateLimitSubjectFromHeaders", () => {
+  it("does not trust forwarded headers by default", () => {
+    process.env.TRUST_PROXY_HEADERS = "";
+    const headers = new Headers({
+      "x-forwarded-for": "203.0.113.10"
+    });
+
+    expect(trustProxyHeaders()).toBe(false);
+    expect(rateLimitSubjectFromHeaders(headers)).toBe("direct-client");
+  });
+
+  it("uses forwarded headers when trust is explicitly enabled", () => {
+    process.env.TRUST_PROXY_HEADERS = "true";
+    const headers = new Headers({
+      "x-forwarded-for": "203.0.113.10, 198.51.100.2"
+    });
+
+    expect(trustProxyHeaders()).toBe(true);
+    expect(rateLimitSubjectFromHeaders(headers)).toBe("203.0.113.10");
+    process.env.TRUST_PROXY_HEADERS = "";
   });
 });
 

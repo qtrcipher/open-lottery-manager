@@ -13,7 +13,7 @@ This project is software only. Operators are responsible for complying with all 
 - Public campaign pages with rules, prizes, entry status, ticket lookup, and draw records.
 - Admin tools for campaigns, participants, prizes, CSV import/export, audit logs, branding, and operations links.
 - Auditable draws with seed hashes, algorithm version, ordered winners, and export-friendly records.
-- Self-hosting support with Docker Compose, SQLite persistence, backup/restore helpers, runtime health checks, and smoke tests.
+- Self-hosting support with Docker Compose, SQLite persistence, backup/restore helpers, runtime health checks, proxy-aware rate limits, and smoke tests.
 - GitHub Actions for tests, lint, build, Docker validation, dependency audit, release validation, and E2E smoke checks.
 
 ## Screenshots
@@ -105,7 +105,7 @@ For production setup, backups, reverse proxy notes, upgrades, and troubleshootin
 - Generate a long random `AUTH_SECRET`; never reuse the example value.
 - Generate `ADMIN_PASSWORD_HASH` with `npm run hash-password -- "your-password"`.
 - Use Docker Compose or another persistent volume for SQLite, and back up the database before draws and before upgrades.
-- Put the app behind HTTPS and a trusted reverse proxy. Control forwarded IP headers before relying on rate limits.
+- Put the app behind HTTPS and a trusted reverse proxy. Set `TRUST_PROXY_HEADERS=true` only when your proxy controls forwarded IP headers.
 - Set a real `ADMIN_EMAIL`, configure support details in `/admin/settings`, and replace demo rules before publishing campaigns.
 - Verify runtime health with `/api/health` after deployment.
 - Confirm legal, tax, age, prize, advertising, and licensing requirements before accepting public entries.
@@ -128,9 +128,9 @@ Taylor Morgan,taylor.morgan@example.com,INV-1002
 
 Admins can enable public entries per campaign. Public entry forms appear only when a campaign is published, open, inside its configured date window, and has no completed draw. After a participant enters, the app shows a ticket code for their records.
 
-Participants can revisit `/campaigns/[slug]/lookup` to find their ticket code with the email address used for entry and an optional reference.
+Participants can revisit `/campaigns/[slug]/lookup` to find their ticket code with the email address used for entry. Campaign admins can require the entry reference for public entry and lookup when stronger participant verification is preferred.
 
-Public entry and lookup forms include basic abuse protection: a hidden honeypot field and per-campaign IP rate limits stored in the SQLite database. For high-traffic or regulated deployments, put the app behind a trusted reverse proxy, WAF, or CAPTCHA service, and make sure forwarded IP headers are controlled by your proxy.
+Public entry, ticket lookup, and admin login forms include basic abuse protection with SQLite-backed rate limits. Public forms also include hidden honeypot fields. By default, the app does not trust forwarded IP headers; set `TRUST_PROXY_HEADERS=true` only behind a controlled proxy, WAF, or platform that strips client-supplied forwarding headers.
 
 ## CSV Export
 
