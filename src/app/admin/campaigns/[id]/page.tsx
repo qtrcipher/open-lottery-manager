@@ -344,6 +344,7 @@ export default async function CampaignAdminPage({
               <div className="mt-4 space-y-3 text-sm">
                 <p className="font-semibold text-moss">Draw completed at {draw.createdAt.toLocaleString()}.</p>
                 <p className="break-all font-mono text-xs text-ink/66">Seed hash: {draw.seedHash}</p>
+                {draw.verificationBundleHash ? <p className="break-all font-mono text-xs text-ink/66">Bundle hash: {draw.verificationBundleHash}</p> : null}
               </div>
             ) : (
               <form action={runDrawAction} className="mt-4">

@@ -14,6 +14,7 @@ import {
 } from "@/lib/campaign-lifecycle";
 import { type CsvImportError, type CsvImportRow, type CsvImportSummary, validateEntriesCsv } from "@/lib/csv";
 import { drawAlgorithmVersion, selectWinners } from "@/lib/draw";
+import { buildDrawVerificationBundle, createDrawEntryManifest, createVerificationBundleHash } from "@/lib/draw-verification";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { slugify } from "@/lib/slug";
@@ -747,6 +748,7 @@ export async function runDrawAction(formData: FormData) {
       throw new Error("Add at least one eligible entry before running a draw.");
     }
 
+    const manifest = createDrawEntryManifest(eligibleEntries);
     const selection = selectWinners(eligibleEntries, campaign.prizes);
     const createdDraw = await tx.draw.create({
       data: {
@@ -754,6 +756,8 @@ export async function runDrawAction(formData: FormData) {
         seed: selection.seed,
         seedHash: selection.seedHash,
         algorithmVersion: drawAlgorithmVersion,
+        entryManifestHash: manifest.hash,
+        entryManifestJson: manifest.json,
         winners: {
           create: selection.winners.map((winner) => ({
             entryId: winner.entryId,
@@ -762,6 +766,27 @@ export async function runDrawAction(formData: FormData) {
           }))
         }
       }
+    });
+    const bundle = buildDrawVerificationBundle({
+      campaign,
+      draw: {
+        id: createdDraw.id,
+        createdAt: createdDraw.createdAt,
+        seed: createdDraw.seed,
+        seedHash: createdDraw.seedHash,
+        algorithmVersion: createdDraw.algorithmVersion,
+        entryManifestHash: manifest.hash,
+        verificationBundleHash: null
+      },
+      entries: manifest.entries,
+      prizes: campaign.prizes,
+      winners: selection.winners
+    });
+    const verificationBundleHash = createVerificationBundleHash(bundle);
+
+    await tx.draw.update({
+      where: { id: createdDraw.id },
+      data: { verificationBundleHash }
     });
 
     await tx.campaign.update({
@@ -779,7 +804,9 @@ export async function runDrawAction(formData: FormData) {
           campaignId,
           eligibleEntryCount: eligibleEntries.length,
           winnerCount: selection.winners.length,
-          seedHash: selection.seedHash
+          seedHash: selection.seedHash,
+          entryManifestHash: manifest.hash,
+          verificationBundleHash
         })
       }
     });

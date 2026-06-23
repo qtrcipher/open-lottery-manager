@@ -75,15 +75,18 @@ model Entry {
 }
 
 model Draw {
-  id               String       @id @default(cuid())
-  campaignId       String
-  seed             String
-  seedHash         String
-  algorithmVersion String
-  status           String       @default("COMPLETED")
-  createdAt        DateTime     @default(now())
-  campaign         Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  winners          DrawWinner[]
+  id                     String       @id @default(cuid())
+  campaignId             String
+  seed                   String
+  seedHash               String
+  algorithmVersion       String
+  entryManifestHash      String?
+  entryManifestJson      String?
+  verificationBundleHash String?
+  status                 String       @default("COMPLETED")
+  createdAt              DateTime     @default(now())
+  campaign               Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  winners                DrawWinner[]
 
   @@unique([campaignId])
 }

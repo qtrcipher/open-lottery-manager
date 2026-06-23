@@ -20,6 +20,7 @@
     "smoke:deploy": "node scripts/smoke-deploy.mjs",
     "smoke:e2e": "node scripts/smoke-e2e.mjs",
     "screenshots": "node scripts/capture-screenshots.mjs",
+    "verify:draw": "node scripts/verify-draw.mjs",
     "release:prepare": "node scripts/prepare-release.mjs",
     "release:prepare:dry-run": "node scripts/prepare-release.mjs --dry-run"
   },
