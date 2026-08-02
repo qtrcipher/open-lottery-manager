@@ -46,12 +46,12 @@
     "eslint-config-next": "16.2.9",
     "jsdom": "^25.0.1",
     "playwright": "^1.61.0",
-    "postcss": "8.5.15",
+    "postcss": "8.5.18",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "vitest": "^4.1.9"
   },
   "overrides": {
-    "postcss": "8.5.15"
+    "postcss": "8.5.18"
   }
 }
