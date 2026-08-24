@@ -4,7 +4,7 @@ export type TurnstileVerificationResult = {
   error?: string;
 };
 
-export function isTurnstileConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+export function isTurnstileConfigured(env: Partial<NodeJS.ProcessEnv> = process.env): boolean {
   return Boolean(env.TURNSTILE_SECRET_KEY?.trim());
 }
 
@@ -16,12 +16,22 @@ export async function verifyTurnstileToken({
 }: {
   token?: string;
   remoteIp?: string;
-  env?: NodeJS.ProcessEnv;
+  env?: Partial<NodeJS.ProcessEnv>;
   fetchImpl?: typeof fetch;
 }): Promise<TurnstileVerificationResult> {
   const secret = env.TURNSTILE_SECRET_KEY?.trim();
 
   if (!secret) {
+    // Fail closed when the widget is rendered (site key set) but the secret is
+    // missing — otherwise the form looks protected while verification is skipped.
+    if (env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim()) {
+      return {
+        ok: false,
+        skipped: false,
+        error: "Turnstile is misconfigured: NEXT_PUBLIC_TURNSTILE_SITE_KEY is set without TURNSTILE_SECRET_KEY."
+      };
+    }
+
     return { ok: true, skipped: true };
   }
 

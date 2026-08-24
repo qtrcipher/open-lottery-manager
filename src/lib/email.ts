@@ -24,12 +24,12 @@ export type EmailSendResult = {
   error?: string;
 };
 
-function envValue(env: NodeJS.ProcessEnv, key: string): string | undefined {
+function envValue(env: Partial<NodeJS.ProcessEnv>, key: string): string | undefined {
   const value = env[key]?.trim();
   return value || undefined;
 }
 
-export function smtpConfigFromEnv(env: NodeJS.ProcessEnv = process.env): SmtpConfig | null {
+export function smtpConfigFromEnv(env: Partial<NodeJS.ProcessEnv> = process.env): SmtpConfig | null {
   const host = envValue(env, "SMTP_HOST");
   const from = envValue(env, "SMTP_FROM");
 
@@ -49,11 +49,11 @@ export function smtpConfigFromEnv(env: NodeJS.ProcessEnv = process.env): SmtpCon
   };
 }
 
-export function isSmtpConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+export function isSmtpConfigured(env: Partial<NodeJS.ProcessEnv> = process.env): boolean {
   return smtpConfigFromEnv(env) !== null;
 }
 
-export async function sendTicketReceipt(input: TicketReceiptInput, env: NodeJS.ProcessEnv = process.env): Promise<EmailSendResult> {
+export async function sendTicketReceipt(input: TicketReceiptInput, env: Partial<NodeJS.ProcessEnv> = process.env): Promise<EmailSendResult> {
   const config = smtpConfigFromEnv(env);
 
   if (!config) {
@@ -65,6 +65,8 @@ export async function sendTicketReceipt(input: TicketReceiptInput, env: NodeJS.P
       host: config.host,
       port: config.port,
       secure: config.secure,
+      // On submission ports (587) demand STARTTLS so credentials are never sent cleartext.
+      ...(config.secure ? {} : { requireTLS: true }),
       ...(config.user && config.password ? { auth: { user: config.user, pass: config.password } } : {})
     });
 

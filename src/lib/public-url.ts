@@ -18,7 +18,7 @@ export function publicAppBaseUrl({
   env = process.env
 }: {
   headers: HeaderReader;
-  env?: NodeJS.ProcessEnv;
+  env?: Partial<NodeJS.ProcessEnv>;
 }): string | null {
   const configured = env.PUBLIC_APP_URL?.trim();
   if (configured) {
@@ -33,7 +33,7 @@ export function publicAppBaseUrl({
   return cleanBaseUrl(`http://${host}`);
 }
 
-export function publicAppUrl(path: string, options: { headers: HeaderReader; env?: NodeJS.ProcessEnv }): string | null {
+export function publicAppUrl(path: string, options: { headers: HeaderReader; env?: Partial<NodeJS.ProcessEnv> }): string | null {
   const baseUrl = publicAppBaseUrl(options);
   if (!baseUrl) {
     return null;

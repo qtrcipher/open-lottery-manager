@@ -12,7 +12,8 @@ services:
       PORT: 3000
     volumes:
       - lottery-data:/app/data
-    command: sh -c "npx prisma db push --accept-data-loss && npm run start"
+    # Schema drift fails loudly instead of dropping tables; run migrations deliberately with a backup first.
+    command: sh -c "npx prisma db push && npm run start"
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/health || exit 1"]
       interval: 30s

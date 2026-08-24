@@ -92,6 +92,18 @@ if (backupStats.size <= 0) {
   fail(`backup file is empty: ${backupPath}`);
 }
 
+// Verify the file is actually a SQLite database before swapping it in.
+const header = Buffer.alloc(16);
+const fd = fs.openSync(backupPath, "r");
+try {
+  fs.readSync(fd, header, 0, 16, 0);
+} finally {
+  fs.closeSync(fd);
+}
+if (header.toString("latin1") !== "SQLite format 3\0") {
+  fail(`backup file is not a SQLite database: ${backupPath}`);
+}
+
 try {
   runDocker(["compose", "version"]);
 } catch {

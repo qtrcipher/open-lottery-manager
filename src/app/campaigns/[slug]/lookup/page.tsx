@@ -5,6 +5,7 @@ import { lookupTicketAction } from "@/app/campaigns/actions";
 import { OperatorBrand } from "@/components/brand";
 import { Label, PageShell, Panel, SubmitButton, TextInput } from "@/components/ui";
 import { getAppSettings } from "@/lib/app-settings";
+import { verifyLookupToken } from "@/lib/lookup-token";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export default async function TicketLookupPage({
   searchParams
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ status?: string; ticket?: string }>;
+  searchParams: Promise<{ status?: string; ticket?: string; token?: string }>;
 }) {
   const [resolvedParams, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const [settings, campaign] = await Promise.all([
@@ -49,10 +50,20 @@ export default async function TicketLookupPage({
   }
 
   const lookupMessage = lookupStatusMessage(resolvedSearchParams.status);
+  // Only reveal entry status when the rate-limited lookup action signed the
+  // result. A bare `?status=found&ticket=…` URL must not work as an oracle.
+  const requestedTicket = resolvedSearchParams.status === "found" ? resolvedSearchParams.ticket : undefined;
+  const hasValidToken = requestedTicket
+    ? verifyLookupToken({
+        campaignId: campaign.id,
+        ticketCode: requestedTicket,
+        token: resolvedSearchParams.token
+      })
+    : false;
   const entry =
-    resolvedSearchParams.status === "found" && resolvedSearchParams.ticket
+    hasValidToken && requestedTicket
       ? await prisma.entry.findFirst({
-          where: { campaignId: campaign.id, ticketCode: resolvedSearchParams.ticket },
+          where: { campaignId: campaign.id, ticketCode: requestedTicket },
           select: { ticketCode: true, isEligible: true, createdAt: true }
         })
       : null;
