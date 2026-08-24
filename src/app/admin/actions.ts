@@ -13,7 +13,7 @@ import {
   type CampaignStatusValue
 } from "@/lib/campaign-lifecycle";
 import { type CsvImportError, type CsvImportRow, type CsvImportSummary, validateEntriesCsv } from "@/lib/csv";
-import { drawAlgorithmVersion, selectWinners } from "@/lib/draw";
+import { drawAlgorithmVersion, createDrawSeed, createSeedHash, selectWinners } from "@/lib/draw";
 import { buildDrawVerificationBundle, createDrawEntryManifest, createVerificationBundleHash } from "@/lib/draw-verification";
 import { isApprovedForDraw } from "@/lib/abuse";
 import { prisma } from "@/lib/prisma";
@@ -734,6 +734,54 @@ export async function confirmEntriesImportAction(_previousState: EntryImportActi
   });
 }
 
+export async function commitDrawSeedAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const campaignId = formString(formData, "campaignId");
+  const seed = createDrawSeed();
+  const seedHash = createSeedHash(seed);
+
+  const { slug } = await prisma.$transaction(async (tx) => {
+    const committed = await tx.campaign.updateMany({
+      where: {
+        id: campaignId,
+        status: { notIn: ["ARCHIVED", "DRAWN"] },
+        draws: { none: {} },
+        drawSeedHash: null
+      },
+      data: {
+        drawSeedCommit: seed,
+        drawSeedHash: seedHash,
+        drawSeedCommittedAt: new Date()
+      }
+    });
+
+    if (committed.count !== 1) {
+      throw new Error("Draw seed can only be committed once, before the draw, on an active campaign.");
+    }
+
+    const campaign = await tx.campaign.findUniqueOrThrow({
+      where: { id: campaignId },
+      select: { slug: true }
+    });
+
+    await tx.auditLog.create({
+      data: {
+        action: "draw.commit_seed",
+        entityType: "Campaign",
+        entityId: campaignId,
+        metadata: JSON.stringify({ admin: admin.email, seedHash })
+      }
+    });
+
+    return { slug: campaign.slug };
+  });
+
+  revalidatePath("/");
+  revalidatePath(`/campaigns/${slug}`);
+  revalidatePath(`/admin/campaigns/${campaignId}`);
+  redirect(`/admin/campaigns/${campaignId}?committed=1`);
+}
+
 export async function runDrawAction(formData: FormData) {
   const admin = await requireAdmin();
   const campaignId = formString(formData, "campaignId");
@@ -779,13 +827,28 @@ export async function runDrawAction(formData: FormData) {
       throw new Error("Add at least one prize before running a draw.");
     }
 
+    if (!campaign.drawSeedCommit || !campaign.drawSeedHash || !campaign.drawSeedCommittedAt) {
+      throw new Error("Commit the draw seed before running the draw.");
+    }
+
     const eligibleEntries = campaign.entries.filter(isApprovedForDraw);
     if (eligibleEntries.length === 0) {
       throw new Error("Add at least one eligible entry before running a draw.");
     }
 
-    const manifest = createDrawEntryManifest(eligibleEntries);
-    const selection = selectWinners(eligibleEntries, campaign.prizes);
+    // The manifest freezes ALL entries (with eligibility flags) so exclusions
+    // are publicly auditable; the draw itself still selects from eligible ones.
+    const manifest = createDrawEntryManifest(campaign.entries);
+    const selection = selectWinners(
+      campaign.entries.map((entry) => ({ ...entry, isEligible: isApprovedForDraw(entry) })),
+      campaign.prizes,
+      campaign.drawSeedCommit
+    );
+
+    if (selection.seedHash !== campaign.drawSeedHash) {
+      throw new Error("Committed seed does not match its published hash.");
+    }
+
     const createdDraw = await tx.draw.create({
       data: {
         campaignId,
@@ -794,6 +857,7 @@ export async function runDrawAction(formData: FormData) {
         algorithmVersion: drawAlgorithmVersion,
         entryManifestHash: manifest.hash,
         entryManifestJson: manifest.json,
+        seedCommittedAt: campaign.drawSeedCommittedAt,
         winners: {
           create: selection.winners.map((winner) => ({
             entryId: winner.entryId,
@@ -811,7 +875,8 @@ export async function runDrawAction(formData: FormData) {
         seedHash: createdDraw.seedHash,
         algorithmVersion: createdDraw.algorithmVersion,
         entryManifestHash: manifest.hash,
-        verificationBundleHash: null
+        verificationBundleHash: null,
+        seedCommittedAt: campaign.drawSeedCommittedAt
       },
       entries: manifest.entries,
       prizes: campaign.prizes,
@@ -826,7 +891,9 @@ export async function runDrawAction(formData: FormData) {
 
     await tx.campaign.update({
       where: { id: campaignId },
-      data: { status: "DRAWN", isPublic: true, allowPublicEntries: false }
+      // Preserve isPublic: running a draw must not silently publish a private campaign.
+      // The raw committed seed is revealed via the draw record, so drop the extra copy.
+      data: { status: "DRAWN", allowPublicEntries: false, drawSeedCommit: null }
     });
 
     await tx.auditLog.create({
@@ -853,6 +920,48 @@ export async function runDrawAction(formData: FormData) {
   revalidatePath(`/campaigns/${slug}`);
   revalidatePath(`/admin/campaigns/${campaignId}`);
   redirect(`/admin/campaigns/${campaignId}?draw=${draw.id}`);
+}
+
+export async function publishResultsAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const campaignId = formString(formData, "campaignId");
+
+  const { slug } = await prisma.$transaction(async (tx) => {
+    const published = await tx.campaign.updateMany({
+      where: {
+        id: campaignId,
+        status: "DRAWN",
+        isPublic: false,
+        draws: { some: {} }
+      },
+      data: { isPublic: true }
+    });
+
+    if (published.count !== 1) {
+      throw new Error("Only drawn, unpublished campaigns can publish results.");
+    }
+
+    const campaign = await tx.campaign.findUniqueOrThrow({
+      where: { id: campaignId },
+      select: { slug: true }
+    });
+
+    await tx.auditLog.create({
+      data: {
+        action: "campaign.publish_results",
+        entityType: "Campaign",
+        entityId: campaignId,
+        metadata: JSON.stringify({ admin: admin.email })
+      }
+    });
+
+    return { slug: campaign.slug };
+  });
+
+  revalidatePath("/");
+  revalidatePath(`/campaigns/${slug}`);
+  revalidatePath(`/admin/campaigns/${campaignId}`);
+  redirect(`/admin/campaigns/${campaignId}?published=1`);
 }
 
 export async function archiveCampaignAction(formData: FormData) {

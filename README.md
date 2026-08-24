@@ -47,7 +47,7 @@ This project is software only. Operators are responsible for complying with all 
 - Public participant entry forms, manual entry creation, and CSV import.
 - Public entry abuse controls with rate limits, honeypots, optional Turnstile, and admin review status.
 - Optional SMTP ticket receipts for public entries.
-- Auditable draws using server-side cryptographic randomness, frozen manifests, revealed seeds, and offline replay.
+- Auditable draws using commit-reveal seeds (the seed hash is committed publicly before the draw and the seed is revealed after), frozen all-entry manifests with eligibility flags, and offline replay.
 - Public results pages with seed hashes, manifest hashes, bundle hashes, and algorithm version.
 - Operator branding settings for name, tagline, support email, logo URL, and primary color.
 - Single-admin authentication for small self-hosted deployments.
@@ -92,7 +92,7 @@ Update `.env` with:
 
 - `AUTH_SECRET`: a long random value.
 - `ADMIN_EMAIL`: the admin login email.
-- `ADMIN_PASSWORD_HASH`: the generated password hash.
+- `ADMIN_PASSWORD_HASH`: the generated password hash. Current hashes use colon separators (`scrypt:16384:...`) because `$` characters in env files get expanded and corrupted by dotenv-style loaders; legacy `scrypt$...` hashes still verify when set via real environment variables.
 
 Optional settings include SMTP receipt variables and Cloudflare Turnstile keys from `.env.example`. Set `PUBLIC_APP_URL` to the public HTTPS origin when SMTP receipts are enabled in production so ticket lookup links do not depend on request headers.
 

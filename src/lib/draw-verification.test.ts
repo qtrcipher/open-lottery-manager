@@ -80,12 +80,13 @@ describe("draw verification bundle", () => {
     { id: "prize-1", name: "First", quantity: 1, sortOrder: 1 }
   ];
 
-  it("freezes only eligible entries in deterministic order", () => {
+  it("freezes all entries with eligibility flags in deterministic order", () => {
     const manifest = createDrawEntryManifest(entries);
 
-    expect(manifest.entries.map((entry) => entry.sourceEntryId)).toEqual(["entry-a", "entry-b"]);
-    expect(manifest.publicEntries.map((entry) => entry.entryKey)).toEqual(["entry-000001", "entry-000002"]);
-    expect(manifest.entries.map((entry) => entry.ticketCode)).toEqual(["TKT-A", "TKT-B"]);
+    expect(manifest.entries.map((entry) => entry.sourceEntryId)).toEqual(["entry-a", "entry-x", "entry-b"]);
+    expect(manifest.publicEntries.map((entry) => entry.entryKey)).toEqual(["entry-000001", "entry-000002", "entry-000003"]);
+    expect(manifest.entries.map((entry) => entry.ticketCode)).toEqual(["TKT-A", "TKT-X", "TKT-B"]);
+    expect(manifest.entries.map((entry) => entry.eligible)).toEqual([true, false, true]);
     expect(manifest.hash).toBe(createVerificationHash(manifest.publicEntries));
   });
 
@@ -130,7 +131,8 @@ describe("draw verification bundle", () => {
     expect(bundle.draw).not.toHaveProperty("id");
     expect(bundle.entries).toEqual(manifest.publicEntries);
     expect(bundle.entries[0]).not.toHaveProperty("sourceEntryId");
-    expect(bundle.winners[0]).toMatchObject({ entryKey: "entry-000002", prizeKey: "prize-0001" });
+    expect(bundle.winners[0]).toMatchObject({ entryKey: "entry-000003", prizeKey: "prize-0001" });
+    expect(bundle.winners.map((winner) => winner.entryKey)).not.toContain("entry-000002");
     expect(bundle.winners[0]).not.toHaveProperty("entryId");
     expect(bundle.prizes[0]).not.toHaveProperty("prizeId");
     expect(verifyDrawBundle(withStoredHash)).toMatchObject({

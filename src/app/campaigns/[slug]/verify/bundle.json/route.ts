@@ -45,7 +45,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       seedHash: draw.seedHash,
       algorithmVersion: draw.algorithmVersion,
       entryManifestHash: draw.entryManifestHash,
-      verificationBundleHash: draw.verificationBundleHash
+      verificationBundleHash: draw.verificationBundleHash,
+      seedCommittedAt: draw.seedCommittedAt
     },
     entries,
     prizes: campaign.prizes,

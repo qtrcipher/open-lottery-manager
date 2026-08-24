@@ -85,6 +85,12 @@ export default async function DrawVerificationPage({ params }: { params: Promise
               <dt className="text-ink/64">Draw completed</dt>
               <dd className="font-semibold">{formatDateTime(draw.createdAt)}</dd>
             </div>
+            {draw.seedCommittedAt ? (
+              <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
+                <dt className="text-ink/64">Seed committed</dt>
+                <dd className="font-semibold">{formatDateTime(draw.seedCommittedAt)}</dd>
+              </div>
+            ) : null}
             <div>
               <dt className="text-ink/64">Revealed seed</dt>
               <dd className="mt-1 break-all font-mono text-xs">{draw.seed}</dd>
@@ -173,7 +179,8 @@ export default async function DrawVerificationPage({ params }: { params: Promise
           <div className="mt-3 space-y-3 text-sm leading-6 text-ink/70">
             <p>
               Download the bundle and run <span className="font-mono text-xs">npm run verify:draw -- bundle.json</span> from this repository to replay
-              the draw from the frozen eligible-entry manifest and revealed seed.
+              the draw from the frozen entry manifest and revealed seed. The manifest lists every entry with its eligibility flag, so exclusions are
+              auditable too.
             </p>
             <p>
               The bundle omits participant names, emails, and database IDs. It uses public entry keys and ticket codes so participants can inspect the

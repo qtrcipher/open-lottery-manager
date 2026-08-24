@@ -44,6 +44,9 @@ function hashToNumber(seed, index) {
 
 function selectWinners(entries, prizes, seed) {
   const pool = entries
+    // v3 manifests list every entry with an eligible flag; v2 manifests only
+    // contained eligible entries, so a missing flag means eligible.
+    .filter((entry) => entry.eligible !== false)
     .map((entry) => ({ id: entry.entryKey, createdAt: new Date(entry.createdAt) }))
     .sort((first, second) => first.createdAt.getTime() - second.createdAt.getTime() || first.id.localeCompare(second.id));
   const orderedPrizes = [...prizes].sort((first, second) => first.sortOrder - second.sortOrder || first.prizeKey.localeCompare(second.prizeKey));

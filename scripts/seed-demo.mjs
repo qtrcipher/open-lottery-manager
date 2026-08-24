@@ -68,19 +68,22 @@ function toPublicManifestEntry(entry) {
   return {
     entryKey: entry.entryKey,
     ticketCode: entry.ticketCode,
-    createdAt: entry.createdAt
+    createdAt: entry.createdAt,
+    eligible: entry.eligible
   };
 }
 
 function createManifest(entryRecords) {
+  // Freeze every entry with an eligibility flag so exclusions are auditable.
   const manifestEntries = entryRecords
-    .filter((entry) => entry.isEligible)
+    .slice()
     .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
     .map((entry, index) => ({
       entryKey: publicEntryKey(index),
       sourceEntryId: entry.id,
       ticketCode: entry.ticketCode,
-      createdAt: entry.createdAt.toISOString()
+      createdAt: entry.createdAt.toISOString(),
+      eligible: entry.isEligible && (entry.reviewStatus ?? "APPROVED") === "APPROVED"
     }));
   const publicEntries = manifestEntries.map(toPublicManifestEntry);
   const json = canonicalJson(manifestEntries);
@@ -137,7 +140,7 @@ function createBundle({ campaign, draw, manifest, prizes, winners }) {
   const prizeById = new Map(prizeRows.map((prize) => [prize.sourcePrizeId, prize]));
 
   return {
-    schemaVersion: "olm-draw-bundle-v2",
+    schemaVersion: "olm-draw-bundle-v3",
     campaign: {
       slug: campaign.slug,
       title: campaign.title

@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { publicAppUrl } from "@/lib/public-url";
 import { checkRateLimit, isHoneypotFilled, rateLimitSubjectFromHeaders } from "@/lib/rate-limit";
 import { createTicketCode } from "@/lib/tickets";
+import { createLookupToken } from "@/lib/lookup-token";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { publicEntrySchema, ticketLookupSchema } from "@/lib/validators";
 
@@ -358,5 +359,9 @@ export async function lookupTicketAction(formData: FormData) {
     redirectToLookup(campaign.slug, { status: "not-found" });
   }
 
-  redirectToLookup(campaign.slug, { status: "found", ticket: entry.ticketCode });
+  redirectToLookup(campaign.slug, {
+    status: "found",
+    ticket: entry.ticketCode,
+    token: createLookupToken({ campaignId: campaign.id, ticketCode: entry.ticketCode })
+  });
 }

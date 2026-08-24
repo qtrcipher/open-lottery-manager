@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { createSeedHash, selectWinners, type WinnerSelection } from "./draw";
+import { isApprovedForDraw } from "./abuse";
 
 export type VerificationEntry = {
   isEligible: boolean;
@@ -34,6 +35,9 @@ export type DrawManifestEntry = {
   entryKey: string;
   ticketCode: string;
   createdAt: string;
+  // Optional for bundles created before exclusion transparency (v2 semantics:
+  // manifests only contained eligible entries, so a missing flag means eligible).
+  eligible?: boolean;
 };
 
 export type StoredDrawManifestEntry = DrawManifestEntry & {
@@ -44,6 +48,7 @@ export type DrawManifestSourceEntry = {
   id: string;
   ticketCode: string;
   isEligible: boolean;
+  reviewStatus?: string | null;
   createdAt: Date;
 };
 
@@ -55,7 +60,7 @@ export type DrawManifest = {
 };
 
 export type DrawVerificationBundle = {
-  schemaVersion: "olm-draw-bundle-v2";
+  schemaVersion: "olm-draw-bundle-v3";
   campaign: {
     slug: string;
     title: string;
@@ -67,6 +72,7 @@ export type DrawVerificationBundle = {
     algorithmVersion: string;
     entryManifestHash: string;
     verificationBundleHash: string | null;
+    seedCommittedAt?: string;
   };
   entries: DrawManifestEntry[];
   prizes: {
@@ -105,6 +111,7 @@ type BundleDraw = {
   algorithmVersion: string;
   entryManifestHash: string | null;
   verificationBundleHash: string | null;
+  seedCommittedAt?: Date | null;
 };
 
 type BundlePrize = {
@@ -155,7 +162,8 @@ function toPublicManifestEntry(entry: StoredDrawManifestEntry): DrawManifestEntr
   return {
     entryKey: entry.entryKey,
     ticketCode: entry.ticketCode,
-    createdAt: entry.createdAt
+    createdAt: entry.createdAt,
+    eligible: entry.eligible
   };
 }
 
@@ -187,14 +195,17 @@ export function hasPublicDrawManifest(manifestJson: string | null): boolean {
 }
 
 export function createDrawEntryManifest(entries: DrawManifestSourceEntry[]): DrawManifest {
+  // Freeze every entry — not just eligible ones — so exclusion decisions are
+  // publicly auditable. The eligible flag replays the filtering, not omission.
   const manifestEntries = entries
-    .filter((entry) => entry.isEligible)
+    .slice()
     .sort((first, second) => first.createdAt.getTime() - second.createdAt.getTime() || first.id.localeCompare(second.id))
     .map((entry, index) => ({
       entryKey: publicEntryKey(index),
       sourceEntryId: entry.id,
       ticketCode: entry.ticketCode,
-      createdAt: entry.createdAt.toISOString()
+      createdAt: entry.createdAt.toISOString(),
+      eligible: isApprovedForDraw(entry)
     }));
   const publicEntries = manifestEntries.map(toPublicManifestEntry);
   const json = canonicalJson(manifestEntries);
@@ -246,7 +257,7 @@ export function buildDrawVerificationBundle({
   const prizeBySourceId = new Map(prizeRows.map((prize) => [prize.sourcePrizeId, prize]));
   const publicEntries = entries.map(toPublicManifestEntry);
   const bundle: DrawVerificationBundle = {
-    schemaVersion: "olm-draw-bundle-v2",
+    schemaVersion: "olm-draw-bundle-v3",
     campaign: {
       slug: campaign.slug,
       title: campaign.title
@@ -257,7 +268,8 @@ export function buildDrawVerificationBundle({
       seedHash: draw.seedHash,
       algorithmVersion: draw.algorithmVersion,
       entryManifestHash: draw.entryManifestHash ?? createVerificationHash(publicEntries),
-      verificationBundleHash: draw.verificationBundleHash
+      verificationBundleHash: draw.verificationBundleHash,
+      seedCommittedAt: draw.seedCommittedAt?.toISOString()
     },
     entries: publicEntries,
     prizes: prizeRows.map((prize) => ({
@@ -311,7 +323,8 @@ export function verifyDrawBundle(bundle: DrawVerificationBundle): DrawVerificati
   const computedSelection = selectWinners(
     bundle.entries.map((entry) => ({
       id: entry.entryKey,
-      isEligible: true,
+      // v2 manifests contained only eligible entries; a missing flag means eligible.
+      isEligible: entry.eligible !== false,
       createdAt: new Date(entry.createdAt)
     })),
     bundle.prizes.map((prize) => ({

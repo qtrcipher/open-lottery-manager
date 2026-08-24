@@ -10,7 +10,9 @@ if (!password) {
 const params = { N: 16384, r: 8, p: 1 };
 const salt = randomBytes(16).toString("base64url");
 const key = scryptSync(password, salt, 64, params).toString("base64url");
-const hash = `scrypt$${params.N}$${params.r}$${params.p}$${salt}$${key}`;
+// Colon separators only: `$` characters in env file values get expanded and
+// corrupted by dotenv-style loaders, which silently breaks admin login.
+const hash = `scrypt:${params.N}:${params.r}:${params.p}:${salt}:${key}`;
 
 // Quick self-check to catch unsupported runtime behavior.
 const candidate = scryptSync(password, salt, 64, params);
@@ -20,3 +22,6 @@ if (!timingSafeEqual(candidate, Buffer.from(key, "base64url"))) {
 }
 
 console.log(hash);
+console.log("");
+console.log("Paste into .env (colon format survives dotenv expansion; no quoting needed):");
+console.log(`ADMIN_PASSWORD_HASH=${hash}`);

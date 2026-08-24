@@ -176,6 +176,12 @@ export default async function CampaignPage({
             <dd className="mt-2 text-sm font-semibold">{draw ? "Draw completed" : "Awaiting draw"}</dd>
           </div>
         </dl>
+        {!draw && campaign.drawSeedHash ? (
+          <p className="mt-4 rounded-lg border border-moss/30 bg-moss/10 p-3 text-xs leading-5 text-ink/72">
+            <span className="font-semibold text-moss">Draw seed committed{campaign.drawSeedCommittedAt ? ` ${formatDateTime(campaign.drawSeedCommittedAt)}` : ""}.</span>{" "}
+            The operator locked the draw seed before the draw; its hash is <span className="break-all font-mono">{campaign.drawSeedHash}</span> and must match the seed revealed in the draw record.
+          </p>
+        ) : null}
       </header>
 
       {!draw ? (

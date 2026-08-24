@@ -9,8 +9,12 @@ type ScryptHash = {
 };
 
 function parseHash(hash: string): ScryptHash | null {
-  const [scheme, N, r, p, salt, key] = hash.split("$");
-  if (scheme !== "scrypt" || !N || !r || !p || !salt || !key) {
+  // Accept both `scrypt:N:r:p:salt:key` (current) and the legacy
+  // `scrypt$N$r$p$salt$key` format. The `$` variant predates the move away from
+  // dollar signs, which dotenv-style env file loaders expand and corrupt.
+  const parts = hash.includes(":") ? hash.split(":") : hash.split("$");
+  const [scheme, N, r, p, salt, key] = parts;
+  if (scheme !== "scrypt" || !N || !r || !p || !salt || !key || parts.length !== 6) {
     return null;
   }
 

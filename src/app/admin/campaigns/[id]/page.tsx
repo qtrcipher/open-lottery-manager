@@ -7,9 +7,11 @@ import {
   addEntryAction,
   addPrizeAction,
   archiveCampaignAction,
+  commitDrawSeedAction,
   deleteCampaignAction,
   deleteEntryAction,
   deletePrizeAction,
+  publishResultsAction,
   restoreCampaignAction,
   runDrawAction,
   updateCampaignAction,
@@ -406,13 +408,34 @@ export default async function CampaignAdminPage({
               <div className="mt-4 space-y-3 text-sm">
                 <p className="font-semibold text-moss">Draw completed at {draw.createdAt.toLocaleString()}.</p>
                 <p className="break-all font-mono text-xs text-ink/66">Seed hash: {draw.seedHash}</p>
+                {draw.seedCommittedAt ? <p className="text-xs text-ink/66">Seed committed at {draw.seedCommittedAt.toLocaleString()}, before the draw ran.</p> : null}
                 {draw.verificationBundleHash ? <p className="break-all font-mono text-xs text-ink/66">Bundle hash: {draw.verificationBundleHash}</p> : null}
+                {!campaign.isPublic ? (
+                  <form action={publishResultsAction} className="border-t border-line pt-4">
+                    <input name="campaignId" type="hidden" value={campaign.id} />
+                    <p className="mb-3 text-sm leading-6 text-ink/68">This campaign is private. Publishing results makes the campaign page, winners, and verification bundle public.</p>
+                    <SubmitButton>Publish results</SubmitButton>
+                  </form>
+                ) : null}
+              </div>
+            ) : campaign.drawSeedHash ? (
+              <div className="mt-4 space-y-3 text-sm">
+                <p className="font-semibold text-moss">Draw seed committed{campaign.drawSeedCommittedAt ? ` at ${campaign.drawSeedCommittedAt.toLocaleString()}` : ""}.</p>
+                <p className="break-all font-mono text-xs text-ink/66">Committed seed hash: {campaign.drawSeedHash}</p>
+                <form action={runDrawAction} className="border-t border-line pt-4">
+                  <input name="campaignId" type="hidden" value={campaign.id} />
+                  <p className="mb-4 text-sm leading-6 text-ink/68">Running the draw reveals the committed seed, records winners, and locks final results.</p>
+                  <SubmitButton>Run auditable draw</SubmitButton>
+                </form>
               </div>
             ) : (
-              <form action={runDrawAction} className="mt-4">
+              <form action={commitDrawSeedAction} className="mt-4">
                 <input name="campaignId" type="hidden" value={campaign.id} />
-                <p className="mb-4 text-sm leading-6 text-ink/68">Running a draw records winners and locks final public results.</p>
-                <SubmitButton>Run auditable draw</SubmitButton>
+                <p className="mb-4 text-sm leading-6 text-ink/68">
+                  Committing generates the draw seed and publishes its hash before the draw runs, so the outcome cannot be tuned against late entries.
+                  The seed itself stays secret until the draw.
+                </p>
+                <SubmitButton>Commit draw seed</SubmitButton>
               </form>
             )}
           </Panel>

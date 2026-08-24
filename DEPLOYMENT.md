@@ -21,7 +21,7 @@ Edit `.env` before starting:
 
 - `AUTH_SECRET`: a random value with at least 24 characters.
 - `ADMIN_EMAIL`: the operator admin login email.
-- `ADMIN_PASSWORD_HASH`: the generated password hash.
+- `ADMIN_PASSWORD_HASH`: the generated password hash. Current hashes use colon separators (`scrypt:16384:...`) because `$` characters in env files get expanded and corrupted by dotenv-style loaders; legacy `scrypt$...` hashes still verify when set via real environment variables.
 - `PUBLIC_APP_URL`: public HTTPS URL for admin system status, deployment checks, and outbound ticket lookup links. Required for production ticket receipt links when SMTP is configured.
 - `TRUST_PROXY_HEADERS`: set to `true` only when a trusted proxy controls `x-forwarded-for`, `x-real-ip`, or `cf-connecting-ip`.
 - SMTP variables: optional ticket receipt email settings. Leave empty to disable email.
@@ -167,7 +167,7 @@ If the app does not start, inspect the app logs first:
 docker compose -f docker-compose.prod.yml logs app
 ```
 
-- Missing or invalid environment values: confirm `.env` contains `AUTH_SECRET`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD_HASH`. Regenerate the password hash with `npm run hash-password -- "your-password"` if login fails.
+- Missing or invalid environment values: confirm `.env` contains `AUTH_SECRET`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD_HASH`. Regenerate the password hash with `npm run hash-password -- "your-password"` if login fails — older `$`-separated hashes pasted into `.env` files get corrupted by dotenv expansion, so regenerate to get the colon format.
 - Database startup or Prisma errors: confirm the `lottery-data` volume exists, the app can write to `/app/data`, and the production Compose file is setting `DATABASE_URL=file:/app/data/prod.db`.
 - Unhealthy container: run `curl http://localhost:3000/api/health`. HTTP `503` means the app is serving requests but the database check is failing.
 - Failed smoke test: verify the URL passed to `npm run smoke:deploy -- <url>` is reachable from the host running the command and points to this app, not only to the reverse proxy.
