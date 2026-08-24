@@ -28,7 +28,7 @@
     "@prisma/client": "^6.10.1",
     "@types/nodemailer": "^8.0.1",
     "lucide-react": "^0.468.0",
-    "next": "16.2.9",
+    "next": "^16.3.2",
     "nodemailer": "^9.0.1",
     "prisma": "^6.10.1",
     "react": "19.2.7",
@@ -46,12 +46,12 @@
     "eslint-config-next": "16.2.9",
     "jsdom": "^25.0.1",
     "playwright": "^1.61.0",
-    "postcss": "8.5.15",
+    "postcss": "8.5.26",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "vitest": "^4.1.9"
   },
   "overrides": {
-    "postcss": "8.5.15"
+    "postcss": "8.5.26"
   }
 }
