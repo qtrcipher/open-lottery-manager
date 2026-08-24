@@ -2,6 +2,33 @@
 
 All notable changes to Open Lottery Manager will be documented in this file.
 
+## v0.2.0 - 2026-08-24
+
+Security hardening and commit-reveal draw integrity
+
+### Added
+
+- Commit-reveal draw seeds: operators commit a server-generated seed hash publicly before the draw, and the draw reveals exactly that seed. Public campaign pages show the committed hash, and draw records carry the commitment timestamp.
+- Explicit "Publish results" step for drawn private campaigns instead of draws force-publishing them.
+- Auth events (login success, failure, rate limiting, logout) are now written to the audit log with hashed subjects.
+- Signed, short-lived lookup tokens gate the public ticket lookup result, closing the unauthenticated ticket-status oracle.
+- Draw verification manifests now freeze every entry with an eligibility flag (bundle schema `olm-draw-bundle-v3`), so exclusions are publicly auditable; older bundles still verify.
+
+### Changed
+
+- Admin password hashes now use colon separators (`scrypt:16384:...`) because `$` characters in `.env` files are expanded and corrupted by dotenv-style loaders. Legacy `$` hashes still verify when set via real environment variables. Regenerate with `npm run hash-password -- "your-password"` if login fails after upgrading.
+- Login rate limiting now counts failed attempts only and keys per client, so attacker failures cannot lock out the real admin; rate-limit increments are atomic.
+- Ticket codes now carry 64 bits of entropy (up from 40).
+- Turnstile verification fails closed when only the site key is configured.
+- SMTP receipts require STARTTLS when `SMTP_SECURE` is off, so credentials are never sent cleartext.
+- Next.js bumped to 16.3.2 and PostCSS to 8.5.26, clearing all npm audit findings.
+
+### Operations
+
+- Production Compose no longer runs `prisma db push --accept-data-loss` on startup; schema drift now fails loudly so migrations stay deliberate and backed up.
+- The restore script verifies the SQLite file header before swapping in a backup.
+- README, DEPLOYMENT, and `.env.example` document the dotenv-safe password hash format.
+
 ## v0.1.21 - 2026-06-23
 
 Audit hardening fixes
